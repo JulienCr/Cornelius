@@ -19,7 +19,7 @@ Cette page dit ce qui reste sur l’ordinateur du miroir, ce qui part chez OpenA
 
 ## Où va le son du micro
 
-La caméra est lue par la perception, mais le micro est lu par le navigateur qui affiche le miroir, car la conversation passe par la page. Selon les réglages de **Quand il écoute** :
+La perception analyse toujours les images de la caméra. Elle les lit sur le serveur, ou les reçoit du navigateur si vous avez choisi la caméra du navigateur. Le micro, lui, est toujours lu par le navigateur qui affiche le miroir, car la conversation passe par la page. Selon les réglages de **Quand il écoute** :
 
 - **Le mot « Cornelius » ouvre la conversation.** Après **Activer la voix**, le micro reste ouvert pendant la veille. Le son va seulement au serveur, sur l’ordinateur (`127.0.0.1`), puis à la perception qui guette le mot. Rien ne sort de la machine.
 - **Micro gardé prêt** (dans **Quand il écoute → Réglages avancés**). Le micro reste prêt sur l’ordinateur. Le son n’est envoyé à la conversation qu’une fois celle-ci ouverte, avec le début de la phrase.
