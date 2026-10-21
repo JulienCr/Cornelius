@@ -6,6 +6,8 @@ import sys
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
 from pathlib import Path
+import cv2
+import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "perception"))
 from browser_camera import BrowserCamera
@@ -108,9 +110,16 @@ class VisionQuestionCommandTests(unittest.IsolatedAsyncioTestCase):
 
 class CameraCommandTests(unittest.IsolatedAsyncioTestCase):
     async def test_slow_camera_opening_never_blocks_speech_detection(self):
+        for camera in (None, BrowserCamera()):
+            with self.subTest(camera=type(camera).__name__):
+                await self.check_slow_opening(camera)
+
+    async def check_slow_opening(self, camera):
         import threading
         import time
         worker = Worker.__new__(Worker)
+        if camera is not None:
+            worker.camera = camera
         worker.interaction = "conversation"
         worker.last_speech, worker.last_vad_sent = None, 0
         worker.vad = Mock()
@@ -147,6 +156,35 @@ class CameraCommandTests(unittest.IsolatedAsyncioTestCase):
         await asyncio.gather(*worker.camera_tasks)
         self.assertTrue(any('"camera_status"' in value for value in sent if isinstance(value, str)))
         self.assertTrue(worker.camera_enabled)
+
+    async def test_browser_frame_right_after_enable_is_judged_once_the_camera_is_on(self):
+        import time
+        worker = Worker.__new__(Worker)
+        worker.camera = BrowserCamera()
+        worker.camera_enabled = False
+        worker.scene = None
+
+        def slow_enable(preferred=None, mode=None):
+            time.sleep(0.2)
+            status = worker.camera.enable(preferred, mode)
+            worker.camera_enabled = True
+            return status
+
+        worker.enable_camera = slow_enable
+        jpeg = cv2.imencode(".jpg", np.zeros((48, 64, 3), dtype=np.uint8))[1].tobytes()
+        sent = []
+
+        class Socket:
+            async def send(self, value):
+                sent.append(json.loads(value))
+
+            async def __aiter__(self):
+                yield json.dumps({"type": "camera_enabled", "enabled": True})
+                yield b"\x43" + (7).to_bytes(4, "big") + jpeg
+
+        await worker.commands(Socket())
+        ack = next(event for event in sent if event["type"] == "camera_frame_ack")
+        self.assertEqual(ack, {"type": "camera_frame_ack", "sequence": 7, "accepted": True})
 
     async def test_failed_camera_job_does_not_break_a_source_switch(self):
         worker = Worker.__new__(Worker)

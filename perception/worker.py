@@ -241,6 +241,9 @@ class Worker:
                 if (len(message) >= 9 and len(message) not in (1024, 2562)
                         and message[0] == 0x43 and message[5:7] == b"\xff\xd8"):
                     accepted = False
+                    if isinstance(getattr(self, "camera", None), BrowserCamera):
+                        # A frame is judged after the camera commands that precede it.
+                        await self.wait_camera_jobs()
                     if isinstance(getattr(self, "camera", None), BrowserCamera) and self.camera_enabled:
                         had_frame = self.camera.selected_id is not None
                         accepted = await asyncio.to_thread(self.camera.receive, message[5:])
@@ -287,15 +290,13 @@ class Worker:
                 await socket.send(json.dumps({"type": "camera_source_status", "source": event["source"]}))
             elif event["type"] == "browser_camera_reset":
                 if isinstance(getattr(self, "camera", None), BrowserCamera):
+                    await self.wait_camera_jobs()
                     await asyncio.to_thread(self.camera.reset)
                     if self.vision:
                         self.vision.reset_tracks()
                     await socket.send(json.dumps(self.camera.status()))
             elif event["type"] in ("camera_enabled", "camera_list", "camera_select", "camera_mode", "camera_preview"):
-                if isinstance(getattr(self, "camera", None), BrowserCamera):
-                    await self.camera_command(socket, event)
-                else:
-                    self.camera_job(lambda event=event: self.camera_command(socket, event))
+                self.camera_job(lambda event=event: self.camera_command(socket, event))
             elif event["type"] == "engagement":
                 self.engagement = event["settings"]
                 if self.vision:
