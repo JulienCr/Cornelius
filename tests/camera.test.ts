@@ -123,3 +123,24 @@ test('résolution et cadence : enregistrées, envoyées à la perception et rest
   assert.deepEqual(again.find((event) => event.type === 'camera_mode')?.mode, mode);
   restored.disconnect();
 });
+
+test('browser resolution acknowledgements preserve the previously selected server camera', (t) => {
+  const f = fixture(t);
+  f.camera.select('two');
+  f.camera.receive({ ...status, selectedId: 'two', requestId: f.sent.at(-1)!.requestId });
+  f.camera.receive({
+    type: 'camera_status',
+    selectedId: 'browser',
+    devices: [{ id: 'browser', label: 'Browser' }],
+    error: null,
+  });
+  f.camera.setMode({ width: 640, height: 480, fps: 15 });
+  f.camera.receive({
+    type: 'camera_status',
+    selectedId: 'browser',
+    devices: [{ id: 'browser', label: 'Browser' }],
+    error: null,
+    requestId: f.sent.at(-1)!.requestId,
+  });
+  assert.equal(f.camera.savedDevice(), 'two');
+});
