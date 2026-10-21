@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
 import {
+  BROWSER_CAMERA_ENCODING_STEPS,
   BROWSER_CAMERA_MAX_BYTES,
   encodeBrowserCameraFrame,
   type BrowserCameraConfig,
 } from '../../shared/camera';
+import { reportDiagnostic } from '../diagnostics';
 
 /** Invisible capture owned by the active mirror; user-facing status stays in administration. */
 export function BrowserCamera({
@@ -29,6 +31,8 @@ export function BrowserCamera({
     let awaiting: { sequence: number; at: number } | null = null;
     let sequence = crypto.getRandomValues(new Uint32Array(1))[0]!;
     let retryMs = 500;
+    let step = 0;
+    let exhausted = false;
     const video = videoRef.current!;
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
@@ -81,7 +85,9 @@ export function BrowserCamera({
         socket.bufferedAmount > 0
       )
         return;
-      const scale = Math.min(1, width / video.videoWidth, height / video.videoHeight);
+      const settings = BROWSER_CAMERA_ENCODING_STEPS[step]!;
+      const scale =
+        Math.min(1, width / video.videoWidth, height / video.videoHeight) * settings.scale;
       canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
       canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -91,13 +97,26 @@ export function BrowserCamera({
         (blob) => {
           void (async () => {
             try {
-              if (
-                !blob ||
-                blob.size > BROWSER_CAMERA_MAX_BYTES ||
-                disposed ||
-                socket !== current ||
-                current.readyState !== WebSocket.OPEN
-              )
+              if (blob && blob.size > BROWSER_CAMERA_MAX_BYTES) {
+                // Dropping every frame would leave perception without images.
+                const kb = Math.round(blob.size / 1000);
+                const next = BROWSER_CAMERA_ENCODING_STEPS[step + 1];
+                if (next) {
+                  step++;
+                  reportDiagnostic(
+                    'warn',
+                    `caméra du navigateur : image de ${kb} Ko, qualité ${Math.round(next.quality * 100)} %, taille ${Math.round(next.scale * 100)} %`,
+                  );
+                } else if (!exhausted) {
+                  exhausted = true;
+                  reportDiagnostic(
+                    'error',
+                    `caméra du navigateur : image de ${kb} Ko, réduction épuisée`,
+                  );
+                }
+                return;
+              }
+              if (!blob || disposed || socket !== current || current.readyState !== WebSocket.OPEN)
                 return;
               const image = await blob.arrayBuffer();
               if (disposed || socket !== current || current.readyState !== WebSocket.OPEN) return;
@@ -111,7 +130,7 @@ export function BrowserCamera({
           })();
         },
         'image/jpeg',
-        0.7,
+        settings.quality,
       );
     };
     void (async () => {

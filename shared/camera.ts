@@ -1,6 +1,15 @@
 export type CameraSource = 'server' | 'browser';
 /** Images JPEG bornées ; une seule image en vol jusqu’à l’accusé de la perception. */
 export const BROWSER_CAMERA_MAX_BYTES = 250_000;
+/** JPEG settings tried in order when a frame exceeds the limit: quality first, then size. */
+export const BROWSER_CAMERA_ENCODING_STEPS: readonly { quality: number; scale: number }[] = [
+  { quality: 0.7, scale: 1 },
+  { quality: 0.55, scale: 1 },
+  { quality: 0.4, scale: 1 },
+  { quality: 0.4, scale: 0.75 },
+  { quality: 0.4, scale: 0.5 },
+  { quality: 0.4, scale: 0.35 },
+];
 export interface BrowserCameraConfig {
   schemaVersion: 1;
   type: 'camera_config';

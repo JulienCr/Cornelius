@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test, { type TestContext } from 'node:test';
 import { CameraBridge } from '../server/camera.js';
+import { BROWSER_CAMERA_ENCODING_STEPS } from '../shared/camera.js';
 import { openDatabase } from '../server/storage.js';
 
 const status = {
@@ -143,4 +144,16 @@ test('browser resolution acknowledgements preserve the previously selected serve
     requestId: f.sent.at(-1)!.requestId,
   });
   assert.equal(f.camera.savedDevice(), 'two');
+});
+
+test('browser frame encoding steps only ever get lighter, and stay bounded', () => {
+  const steps = BROWSER_CAMERA_ENCODING_STEPS;
+  assert.deepEqual(steps[0], { quality: 0.7, scale: 1 });
+  assert.ok(steps.length <= 8);
+  steps.slice(1).forEach((step, index) => {
+    const before = steps[index]!;
+    assert.ok(step.quality <= before.quality && step.scale <= before.scale);
+    assert.ok(step.quality < before.quality || step.scale < before.scale);
+  });
+  assert.ok(steps.at(-1)!.scale <= 0.5 && steps.at(-1)!.quality >= 0.3);
 });

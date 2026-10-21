@@ -45,7 +45,10 @@ La reconnexion utilise un délai progressif borné. Aucun retard d’images n’
 - **Caméra introuvable** : choisissez une caméra disponible ou la caméra par défaut.
 - **Caméra en pause** : vérifiez que cette page est le miroir actif et que la connexion est
   établie. Certains navigateurs suspendent la capture en arrière-plan : gardez le miroir visible.
-- **Image trop volumineuse** : réduisez la résolution dans l’administration.
+- **Image plus petite que prévu** : quand une image dépasse la limite, le miroir baisse seul
+  la qualité, puis la taille, jusqu’à passer sous la limite. Le journal du navigateur le note
+  (« caméra du navigateur : image de … Ko »). Pour éviter cette baisse, choisissez une
+  résolution plus basse dans l’administration.
 
 Aucun flux ne revient silencieusement à la caméra du serveur en cas de panne : le choix reste
 explicite et l’absence d’images fait apparaître la perception comme indisponible.
