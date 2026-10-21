@@ -162,6 +162,13 @@ function Resolve-CorneliusPnpm {
   if ($corepack) {
     $env:COREPACK_ENABLE_DOWNLOAD_PROMPT = '0'
     & $corepack.Source enable *> $null
+    if (-not (Get-Command 'pnpm.cmd', 'pnpm' -ErrorAction SilentlyContinue)) {
+      # Without administrator rights, install the shims in a per-user directory.
+      $bin = Join-Path $env:LOCALAPPDATA 'Cornelius\bin'
+      New-Item -ItemType Directory -Force -Path $bin | Out-Null
+      & $corepack.Source enable --install-directory $bin *> $null
+      $env:PATH = "$bin;$env:PATH"
+    }
     foreach ($name in @('pnpm.cmd', 'pnpm')) {
       $command = Get-Command $name -ErrorAction SilentlyContinue
       if ($command) { return $command.Source }

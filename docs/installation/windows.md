@@ -6,7 +6,7 @@ Cette page explique comment installer Cornelius sur un ordinateur Windows 10 ou 
 
 - Windows 10 ou 11, en 64 bits.
 - [Node.js](https://nodejs.org/) 24, version 24.2 ou plus récente dans la version 24 (celle du fichier `.nvmrc`). Si le site propose une version plus récente, choisissez la 24. Vérifiez avec `node --version`.
-- pnpm 10, activé avec Corepack, fourni avec Node.js 24 : dans un PowerShell lancé en administrateur, tapez `corepack enable`, puis rouvrez PowerShell. Vérifiez avec `pnpm --version`.
+- pnpm 10, activé avec Corepack, fourni avec Node.js 24 : tapez `corepack enable` dans PowerShell, puis rouvrez-le. Sans droits d’administrateur, les scripts du projet l’activent eux-mêmes dans `%LOCALAPPDATA%\Cornelius\bin`. Vérifiez avec `pnpm --version`.
 - [Python](https://www.python.org/downloads/windows/) 3.12, installé depuis python.org avec le lanceur `py` (proposé par l’installateur). Dans la liste, prenez une version 3.12 qui propose un « Windows installer (64-bit) ». Vérifiez avec `py -3.12 --version`. C’est la version validée pour Cornelius, et la seule pour laquelle AMD publie PyTorch sous Windows.
 - [Git pour Windows](https://git-scm.com/download/win).
 - Une webcam, un micro, des haut-parleurs et un navigateur récent (Google Chrome ou Microsoft Edge).
@@ -139,7 +139,7 @@ Les problèmes s’affichent en jaune, précédés de « AVERTISSEMENT : » (« 
 | L’installation des dépendances a échoué (pnpm install, code …) | `pnpm install --frozen-lockfile` n’a pas pu terminer, souvent parce qu’un fichier de `node_modules` est ouvert ailleurs. | Fermez l’éditeur et les autres terminaux ouverts sur le projet, supprimez le dossier `node_modules`, puis relancez `start.ps1`. |
 | Fichier .env absent : lancez « pnpm run setup » | La configuration n’a pas été créée. | Lancez `pnpm run setup`, puis renseignez la clé OpenAI. |
 | Cornelius ne peut pas démarrer : corrigez les points ci-dessus puis relancez. | Résumé des messages précédents. | Corrigez chaque point listé au-dessus. |
-| pnpm est introuvable | Les dépendances ou l’interface sont à installer, mais pnpm manque et Corepack n’a pas pu l’activer. | Dans un PowerShell lancé en administrateur, tapez `corepack enable`, ou installez pnpm 10, puis rouvrez PowerShell. |
+| pnpm est introuvable | Les dépendances ou l’interface sont à installer, mais pnpm manque et Corepack n’a pas pu l’activer. | Tapez `corepack enable` dans PowerShell (en administrateur si l’accès est refusé), ou installez pnpm 10, puis rouvrez PowerShell. |
 | La compilation a échoué (code …). | La compilation de l’interface a rencontré une erreur. | Relancez `pnpm install --frozen-lockfile`, puis `start.ps1 -Build`. Le détail est affiché juste au-dessus. |
 | « 'tsc' n’est pas reconnu… » ou « Cannot find package …\node_modules\tsx\index.js » | `node_modules` est incomplet (version antérieure des scripts). | Lancez `stop.ps1`, supprimez le dossier `node_modules`, puis `pnpm install --frozen-lockfile` et `start.ps1`. |
 | Python de perception introuvable | Le dossier `.venv` n’existe pas. Le serveur démarre quand même, sans caméra ni voix. | Suivez « Préparer la perception » ci-dessus. |
