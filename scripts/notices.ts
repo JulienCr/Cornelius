@@ -14,6 +14,7 @@ type Deps = Record<string, string | { version: string }>;
 interface Lock {
   importers: Record<string, { dependencies?: Deps; optionalDependencies?: Deps }>;
   snapshots: Record<string, { dependencies?: Deps; optionalDependencies?: Deps }>;
+  packages: Record<string, { bundledDependencies?: string[] }>;
 }
 
 // Strips the peer suffix: "react-dom@19.3.0(react@19.3.0)" -> "react-dom@19.3.0".
@@ -43,28 +44,18 @@ function productionKeys(lock: Lock): Set<string> {
   return new Set([...seen].map(bare));
 }
 
-function licenseOf(manifest: { license?: unknown }): string | undefined {
-  const license = manifest.license;
-  if (typeof license === 'string') return license;
-  const type = (license as { type?: unknown } | undefined)?.type;
-  return typeof type === 'string' ? type : undefined;
-}
-
-// Platform-specific optional packages are absent from node_modules on other machines, so their
-// licence comes from the table already committed: the output stays the same everywhere.
-function committedLicenses(): Map<string, string> {
-  const text = existsSync(file) ? readFileSync(file, 'utf8') : '';
-  const from = text.indexOf(start);
-  const licenses = new Map<string, string>();
-  if (from < 0) return licenses;
-  for (const line of text.slice(from, text.indexOf(end)).split('\n')) {
-    const cells = line.split('|').map((cell) => cell.trim());
-    const [, name, version, license] = cells;
-    if (name && version && license && version !== 'Version' && license !== 'voir le paquet') {
-      licenses.set(`${name}@${version}`, license);
-    }
+function licenseOf(manifest: { license?: unknown; licenses?: unknown }): string | undefined {
+  const text = (value: unknown): string | undefined => {
+    if (typeof value === 'string') return value;
+    const type = (value as { type?: unknown } | null | undefined)?.type;
+    return typeof type === 'string' ? type : undefined;
+  };
+  const list = [manifest.license, manifest.licenses].find(Array.isArray);
+  if (list) {
+    const names = list.map(text).filter((name): name is string => !!name);
+    return names.length > 0 ? names.join(' OR ') : undefined;
   }
-  return licenses;
+  return text(manifest.license);
 }
 
 function installedLicenses(): Map<string, string> {
@@ -84,27 +75,69 @@ function installedLicenses(): Map<string, string> {
   return licenses;
 }
 
+// Installed manifest of a package, or of a dependency bundled inside its tarball.
+function installedManifest(
+  parent: string,
+  name: string,
+): { version?: string; license?: string } | undefined {
+  const [parentName, parentVersion] = splitKey(parent);
+  const dir = `${parentName.replace('/', '+')}@${parentVersion}`;
+  const manifest = join(root, 'node_modules', '.pnpm', dir, 'node_modules', name, 'package.json');
+  if (!existsSync(manifest)) return undefined;
+  const json = JSON.parse(readFileSync(manifest, 'utf8')) as { version?: string };
+  return { version: json.version, license: licenseOf(json) };
+}
+
 export function npmNotices(): string {
   const lock = parse(readFileSync(join(root, 'pnpm-lock.yaml'), 'utf8')) as Lock;
   const production = productionKeys(lock);
   const installed = installedLicenses();
-  const committed = committedLicenses();
-  const rows = new Map<string, string>();
+  // Optional platform packages missing from node_modules take the licence of the installed
+  // package that lists them as an optional dependency (esbuild, rollup, lightningcss...).
+  const optionalParent = new Map<string, string>();
+  for (const [snapshot, entry] of Object.entries(lock.snapshots)) {
+    for (const [child, v] of Object.entries(entry.optionalDependencies ?? {})) {
+      const version = typeof v === 'string' ? v : v.version;
+      optionalParent.set(`${child}@${version}`, bare(snapshot));
+    }
+  }
+  const rows = new Map<string, { name: string; version: string; line: string }>();
+  const add = (name: string, version: string, license: string, role: string): void => {
+    rows.set(`${name}@${version}`, {
+      name,
+      version,
+      line: `| ${name} | ${version} | ${license} | ${role} |`,
+    });
+  };
   for (const snapshot of Object.keys(lock.snapshots)) {
     const key = bare(snapshot);
     if (rows.has(key)) continue;
     const [name, version] = splitKey(key);
-    const license = installed.get(key) ?? committed.get(key) ?? 'voir le paquet';
-    rows.set(
-      key,
-      `| ${name} | ${version} | ${license} | ${production.has(key) ? 'exécution' : 'outil'} |`,
-    );
+    const parent = optionalParent.get(key);
+    const license =
+      installed.get(key) ?? (parent ? installed.get(parent) : undefined) ?? 'voir le paquet';
+    add(name, version, license, production.has(key) ? 'exécution' : 'outil');
   }
+  // Bundled dependencies have no snapshot and no version in the lockfile.
+  for (const [pkg, entry] of Object.entries(lock.packages)) {
+    const parent = bare(pkg);
+    for (const name of entry.bundledDependencies ?? []) {
+      const found = installedManifest(parent, name);
+      const version = found?.version ?? `inclus dans ${parent}`;
+      add(
+        name,
+        version,
+        found?.license ?? 'voir le paquet',
+        production.has(parent) ? 'exécution' : 'outil',
+      );
+    }
+  }
+  const sorted = [...rows.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
   return [
     start,
     '| Paquet | Version | Licence | Rôle |',
     '| --- | --- | --- | --- |',
-    ...[...rows.keys()].sort().map((key) => rows.get(key)!),
+    ...sorted.map(([, row]) => row.line),
     end,
   ].join('\n');
 }

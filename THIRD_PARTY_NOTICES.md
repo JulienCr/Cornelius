@@ -56,6 +56,9 @@ Liste générée depuis `pnpm-lock.yaml` par `pnpm notices`. « exécution » : 
 | Paquet | Version | Licence | Rôle |
 | --- | --- | --- | --- |
 | @dimforge/rapier3d-compat | 0.12.0 | Apache-2.0 | outil |
+| @emnapi/core | inclus dans @tailwindcss/oxide-wasm32-wasi@4.3.3 | voir le paquet | outil |
+| @emnapi/runtime | inclus dans @tailwindcss/oxide-wasm32-wasi@4.3.3 | voir le paquet | outil |
+| @emnapi/wasi-threads | inclus dans @tailwindcss/oxide-wasm32-wasi@4.3.3 | voir le paquet | outil |
 | @esbuild/aix-ppc64 | 0.28.2 | MIT | outil |
 | @esbuild/android-arm64 | 0.28.2 | MIT | outil |
 | @esbuild/android-arm | 0.28.2 | MIT | outil |
@@ -105,6 +108,7 @@ Liste générée depuis `pnpm-lock.yaml` par `pnpm notices`. « exécution » : 
 | @jridgewell/trace-mapping | 0.3.31 | MIT | outil |
 | @leichtgewicht/ip-codec | 2.0.5 | MIT | exécution |
 | @lukeed/ms | 2.0.2 | MIT | exécution |
+| @napi-rs/wasm-runtime | inclus dans @tailwindcss/oxide-wasm32-wasi@4.3.3 | voir le paquet | outil |
 | @noble/hashes | 1.8.0 | MIT | exécution |
 | @oxc-project/types | 0.149.0 | MIT | outil |
 | @peculiar/asn1-cms | 2.10.0 | MIT | exécution |
@@ -213,6 +217,7 @@ Liste générée depuis `pnpm-lock.yaml` par `pnpm notices`. « exécution » : 
 | @tailwindcss/oxide | 4.3.3 | MIT | outil |
 | @tailwindcss/vite | 4.3.3 | MIT | outil |
 | @tweenjs/tween.js | 23.1.3 | MIT | outil |
+| @tybys/wasm-util | inclus dans @tailwindcss/oxide-wasm32-wasi@4.3.3 | voir le paquet | outil |
 | @types/node | 24.13.5 | MIT | outil |
 | @types/react-dom | 19.3.0 | MIT | exécution |
 | @types/react | 19.3.0 | MIT | exécution |
@@ -385,6 +390,7 @@ Liste générée depuis `pnpm-lock.yaml` par `pnpm notices`. « exécution » : 
 | toidentifier | 1.0.1 | MIT | exécution |
 | tslib | 1.14.1 | 0BSD | exécution |
 | tslib | 2.8.1 | 0BSD | exécution |
+| tslib | inclus dans @tailwindcss/oxide-wasm32-wasi@4.3.3 | voir le paquet | outil |
 | tsx | 4.23.13 | MIT | outil |
 | tsyringe | 4.10.0 | MIT | exécution |
 | typescript | 7.0.2 | Apache-2.0 | outil |
