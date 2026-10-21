@@ -34,7 +34,7 @@ Tant que le mot de passe vaut `cornelius` (la valeur de départ), aucune connexi
 
 ## Un seul miroir à la fois
 
-Un seul miroir est actif : en ouvrir un sur la tablette ferme celui de l’écran, avec le message « Miroir ouvert dans un autre onglet ». La caméra, le mot d’appel et la vision restent ceux de l’ordinateur de Cornelius ; seuls le micro et le haut-parleur sont ceux de l’appareil qui affiche le miroir.
+Un seul miroir est actif : en ouvrir un sur la tablette ferme celui de l’écran, avec le message « Miroir ouvert dans un autre onglet ». Par défaut, la caméra reste celle du serveur Cornelius. Vous pouvez choisir [la caméra du navigateur](../fonctionnalites/camera-navigateur.md) : ses images sont alors envoyées au serveur par le réseau local chiffré. Le mot d’appel et la vision restent analysés sur le serveur ; le micro et le haut-parleur sont ceux de l’appareil qui affiche le miroir.
 
 ## Ce qui reste réservé à l’ordinateur
 

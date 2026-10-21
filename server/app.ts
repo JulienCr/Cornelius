@@ -351,6 +351,8 @@ export async function createApp(
         );
       }
       broadcast({ schemaVersion: 1, type: 'devices', status }, true);
+      if (kiosk?.socket.readyState === 1)
+        kiosk.socket.send(JSON.stringify(perception.browserCameraConfig()));
     },
     now,
   );
@@ -536,7 +538,8 @@ export async function createApp(
       path.startsWith('/api/') ||
       path.startsWith('/events') ||
       path.startsWith('/audio') ||
-      path.startsWith('/wake-audio')
+      path.startsWith('/wake-audio') ||
+      path.startsWith('/camera-stream')
     );
   }
   function lanAuthorized(request: FastifyRequest): boolean {
@@ -579,7 +582,8 @@ export async function createApp(
         request.url.startsWith('/events') ||
         request.url.startsWith('/perception') ||
         request.url.startsWith('/audio') ||
-        request.url.startsWith('/wake-audio')) &&
+        request.url.startsWith('/wake-audio') ||
+        request.url.startsWith('/camera-stream')) &&
         !origin)
     ) {
       return reply.code(403).send({ error: 'Origine non autorisée.' });
@@ -1268,6 +1272,30 @@ export async function createApp(
       return controller.snapshot();
     },
   );
+  app.get(
+    '/camera-stream',
+    {
+      websocket: true,
+      preValidation: async (request, reply) => {
+        const id = request.cookies[kioskCookie];
+        if (
+          !id ||
+          kiosk?.kioskId !== id ||
+          !clientActive(clients.get(kiosk.socket)!) ||
+          perception.cameraSource() !== 'browser' ||
+          !perception.browserCameraConfig().enabled
+        )
+          return reply.code(403).send({ error: 'Caméra réservée au miroir actif.' });
+      },
+    },
+    (socket) => {
+      const owner = kiosk!.socket;
+      perception.browserCamera.connect(
+        socket,
+        () => kiosk?.socket === owner && !!clients.get(owner) && clientActive(clients.get(owner)!),
+      );
+    },
+  );
   app.get<{ Querystring: { role?: string } }>(
     '/events',
     {
@@ -1284,7 +1312,10 @@ export async function createApp(
       logs.write('info', 'local', 'Navigateur connecté', { role });
       clients.set(socket, { role, sessionId, kioskId, remote: !fromMachine(request) });
       if (role === 'kiosk') {
-        if (kiosk) kiosk.socket.close(1008, 'Miroir ouvert dans un autre onglet');
+        if (kiosk) {
+          perception.browserCamera.close(1008);
+          kiosk.socket.close(1008, 'Miroir ouvert dans un autre onglet');
+        }
         // L’état audio appartient à la page : elle le renvoie dès l’ouverture (media_ready).
         kiosk = { socket, kioskId: kioskId! };
         controller.heartbeat();
@@ -1329,6 +1360,7 @@ export async function createApp(
         logs.write('info', 'local', 'Navigateur déconnecté', { role, code });
         clients.delete(socket);
         if (kiosk?.socket === socket) {
+          perception.browserCamera.close(code === 1008 ? 1008 : 1013);
           kiosk = null;
           // Le média WebRTC ne passe pas par ce WebSocket : une coupure réseau ou une
           // resynchronisation garde la conversation, et le délai navigateur (5 s) la ferme
@@ -1337,6 +1369,7 @@ export async function createApp(
         }
       });
       socket.send(JSON.stringify(controller.snapshot()));
+      if (role === 'kiosk') socket.send(JSON.stringify(perception.browserCameraConfig()));
       if (role === 'admin')
         socket.send(JSON.stringify({ schemaVersion: 1, type: 'devices', status: devices() }));
     },

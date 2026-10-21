@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test, { type TestContext } from 'node:test';
 import { CameraBridge } from '../server/camera.js';
+import { BROWSER_CAMERA_ENCODING_STEPS } from '../shared/camera.js';
 import { openDatabase } from '../server/storage.js';
 
 const status = {
@@ -122,4 +123,37 @@ test('résolution et cadence : enregistrées, envoyées à la perception et rest
   restored.receive({ ...status, mode: { width: 1280, height: 720, fps: 30 }, actual: null });
   assert.deepEqual(again.find((event) => event.type === 'camera_mode')?.mode, mode);
   restored.disconnect();
+});
+
+test('browser resolution acknowledgements preserve the previously selected server camera', (t) => {
+  const f = fixture(t);
+  f.camera.select('two');
+  f.camera.receive({ ...status, selectedId: 'two', requestId: f.sent.at(-1)!.requestId });
+  f.camera.receive({
+    type: 'camera_status',
+    selectedId: 'browser',
+    devices: [{ id: 'browser', label: 'Browser' }],
+    error: null,
+  });
+  f.camera.setMode({ width: 640, height: 480, fps: 15 });
+  f.camera.receive({
+    type: 'camera_status',
+    selectedId: 'browser',
+    devices: [{ id: 'browser', label: 'Browser' }],
+    error: null,
+    requestId: f.sent.at(-1)!.requestId,
+  });
+  assert.equal(f.camera.savedDevice(), 'two');
+});
+
+test('browser frame encoding steps only ever get lighter, and stay bounded', () => {
+  const steps = BROWSER_CAMERA_ENCODING_STEPS;
+  assert.deepEqual(steps[0], { quality: 0.7, scale: 1 });
+  assert.ok(steps.length <= 8);
+  steps.slice(1).forEach((step, index) => {
+    const before = steps[index]!;
+    assert.ok(step.quality <= before.quality && step.scale <= before.scale);
+    assert.ok(step.quality < before.quality || step.scale < before.scale);
+  });
+  assert.ok(steps.at(-1)!.scale <= 0.5 && steps.at(-1)!.quality >= 0.3);
 });

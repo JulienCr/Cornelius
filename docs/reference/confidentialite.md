@@ -4,14 +4,14 @@ Cette page dit ce qui reste sur l’ordinateur du miroir, ce qui part chez OpenA
 
 ## En bref
 
-- La caméra, les visages et la vision restent sur l’ordinateur. Aucune image ne quitte la machine.
+- Par défaut, la caméra est branchée au serveur Cornelius. Avec la caméra du navigateur, les images rejoignent ce serveur par le réseau local chiffré. Les visages et la vision y sont analysés ; aucune image n’est envoyée à OpenAI.
 - En veille, le son du micro reste sur l’ordinateur. Celui d’un satellite audio va à l’ordinateur par le réseau local, chiffré, et n’en sort pas.
 - Pendant une conversation, la voix et le texte de l’échange partent chez OpenAI. Après la conversation, le texte dit par une personne reconnue peut repartir chez OpenAI pour choisir les souvenirs à garder.
 - Cornelius n’enregistre ni image, ni son, ni transcription de conversation sur le disque.
 
 ## Ce qui reste sur l’ordinateur
 
-- **Les images de la caméra.** La caméra est lue par le service caméra (la perception), sur l’ordinateur. Les images restent en mémoire vive et ne sont jamais écrites sur le disque.
+- **Les images de la caméra.** La perception analyse la caméra du serveur, ou les images reçues du navigateur quand cette option est choisie. Les images restent en mémoire vive sur le serveur et ne sont jamais écrites sur le disque.
 - **Les visages.** L’enregistrement d’un visage garde des signatures numériques, calculées à partir des images : ce sont des nombres, pas des photos. Elles sont rangées dans la base. La reconnaissance se fait sur l’ordinateur.
 - **La vision locale.** La description d’une image est calculée sur l’ordinateur par le modèle LFM2.5-VL. Seul le texte de cette description rejoint la conversation, donc OpenAI. Elle n’est jamais écrite dans la mémoire. Voir [La vision locale](../fonctionnalites/vision-locale.md).
 - **Le mot d’appel.** « Cornelius » est reconnu sur l’ordinateur, avec openWakeWord. Aucun service en ligne n’est appelé pour cela.
@@ -19,7 +19,7 @@ Cette page dit ce qui reste sur l’ordinateur du miroir, ce qui part chez OpenA
 
 ## Où va le son du micro
 
-La caméra est lue par la perception, mais le micro est lu par le navigateur qui affiche le miroir, car la conversation passe par la page. Selon les réglages de **Quand il écoute** :
+La perception analyse toujours les images de la caméra. Elle les lit sur le serveur, ou les reçoit du navigateur si vous avez choisi la caméra du navigateur. Le micro, lui, est toujours lu par le navigateur qui affiche le miroir, car la conversation passe par la page. Selon les réglages de **Quand il écoute** :
 
 - **Le mot « Cornelius » ouvre la conversation.** Après **Activer la voix**, le micro reste ouvert pendant la veille. Le son va seulement au serveur, sur l’ordinateur (`127.0.0.1`), puis à la perception qui guette le mot. Rien ne sort de la machine.
 - **Micro gardé prêt** (dans **Quand il écoute → Réglages avancés**). Le micro reste prêt sur l’ordinateur. Le son n’est envoyé à la conversation qu’une fois celle-ci ouverte, avec le début de la phrase.
@@ -132,3 +132,7 @@ Le bouton **Bloquer OpenAI**, dans le panneau **Conversation** de la rubrique **
 - [Les agents Hermes](../fonctionnalites/agents-hermes.md)
 - [Configuration](configuration.md)
 - [Licences](licences.md)
+
+## Caméra du navigateur (option)
+
+Si vous choisissez [la caméra du navigateur](../fonctionnalites/camera-navigateur.md), ses images quittent cet appareil pour rejoindre le serveur Cornelius par le réseau local chiffré. Elles sont analysées en mémoire, sans enregistrement ni envoi à OpenAI. Tant que le navigateur capture des images, une petite icône de caméra s’affiche sur le miroir. La caméra du serveur reste le choix par défaut.
