@@ -220,8 +220,20 @@ class Worker:
         task = asyncio.create_task(run())
         self.camera_tasks.add(task)
         task.add_done_callback(self.camera_tasks.discard)
-        task.add_done_callback(lambda done: done.cancelled() or done.exception())
+        task.add_done_callback(self._log_camera_job)
         return task
+
+    @staticmethod
+    def _log_camera_job(task):
+        # No images, device names or paths in logs: the exception type only.
+        if not task.cancelled() and task.exception() is not None:
+            print("Opération caméra échouée : " + type(task.exception()).__name__, flush=True)
+
+    async def wait_camera_jobs(self):
+        """Wait for queued camera jobs. Failures are logged by the job itself, never re-raised here."""
+        tasks = list(getattr(self, "camera_tasks", None) or ())
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     async def commands(self, socket):
         async for message in socket:
@@ -267,8 +279,7 @@ class Worker:
             if event["type"] == "camera_source" and event.get("source") in ("server", "browser"):
                 requested = event["source"] == "browser"
                 if requested != isinstance(self.camera, BrowserCamera):
-                    for task in list(self.camera_tasks):
-                        await task
+                    await self.wait_camera_jobs()
                     if self.scene:
                         self.scene.cancel("Source de la caméra modifiée.")
                     await asyncio.to_thread(self.disable_camera)
