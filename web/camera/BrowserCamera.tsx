@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Video } from 'lucide-react';
 import {
   BROWSER_CAMERA_ENCODING_STEPS,
   BROWSER_CAMERA_MAX_BYTES,
@@ -7,7 +8,7 @@ import {
 } from '../../shared/camera';
 import { reportDiagnostic } from '../diagnostics';
 
-/** Invisible capture owned by the active mirror; user-facing status stays in administration. */
+/** Capture owned by the active mirror. A small corner icon replaces a webcam's LED while it runs. */
 export function BrowserCamera({
   config,
   active,
@@ -16,6 +17,7 @@ export function BrowserCamera({
   active: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [capturing, setCapturing] = useState(false);
   const enabled = active && config?.source === 'browser' && config.enabled;
   const width = config?.mode.width ?? 1280;
   const height = config?.mode.height ?? 720;
@@ -40,6 +42,7 @@ export function BrowserCamera({
       stream?.getTracks().forEach((track) => track.stop());
       stream = null;
       video.srcObject = null;
+      setCapturing(false);
     };
     const connect = () => {
       if (disposed) return;
@@ -150,6 +153,7 @@ export function BrowserCamera({
         video.srcObject = captured;
         await video.play();
         if (!disposed) {
+          setCapturing(true);
           connect();
           tick();
         }
@@ -167,6 +171,17 @@ export function BrowserCamera({
     };
   }, [enabled, width, height]);
   return config?.source === 'browser' ? (
-    <video ref={videoRef} muted playsInline className="sr-only" aria-hidden="true" />
+    <>
+      <video ref={videoRef} muted playsInline className="sr-only" aria-hidden="true" />
+      {capturing && (
+        <span
+          className="mirror-camera-indicator"
+          role="status"
+          aria-label="Caméra de cet appareil active"
+        >
+          <Video aria-hidden="true" />
+        </span>
+      )}
+    </>
   ) : null;
 }

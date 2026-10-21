@@ -41,10 +41,11 @@ test('browser camera requires a click, bounds frames until decode acknowledgemen
       lastSequence = frame.readUInt32BE(1);
     });
   });
+  const indicator = page.getByRole('status', { name: 'Caméra de cet appareil active' });
   await page.goto('/');
-  await expect(page.getByText('Caméra de cet appareil', { exact: false })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /caméra/i })).toHaveCount(0);
   await expect.poll(() => frames).toBe(1);
+  await expect(indicator).toBeVisible();
   // Multiple capture ticks without an ACK must not send another image.
   await expect
     .poll(async () => page.locator('video').evaluate((v) => (v as HTMLVideoElement).currentTime))
@@ -59,10 +60,13 @@ test('browser camera requires a click, bounds frames until decode acknowledgemen
   await expect
     .poll(() => page.locator('video').evaluate((v) => (v as HTMLVideoElement).srcObject === null))
     .toBe(true);
+  await expect(indicator).toHaveCount(0);
   events!.send(JSON.stringify(config));
   await expect.poll(() => frames).toBe(4);
+  await expect(indicator).toBeVisible();
   events!.send(JSON.stringify({ ...config, source: 'server', enabled: false }));
   await expect(page.locator('video')).toHaveCount(0);
+  await expect(indicator).toHaveCount(0);
 });
 
 test('browser camera lowers quality then size when frames exceed the limit, and reports it', async ({

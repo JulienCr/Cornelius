@@ -27,6 +27,10 @@ La route exige la même origine, un appareil autorisé et le miroir actif. Une n
 miroir retire l’ancien flux. La garantie porte sur l’appareil, pas sur la page : sur l’appareil
 autorisé, toutes les pages du même navigateur partagent l’identité du miroir.
 
+Tant que le navigateur capture des images, une petite icône de caméra s’affiche en bas à droite
+du miroir. Elle tient lieu de voyant, comme celui d’une webcam. Elle disparaît quand la caméra
+est éteinte ou libérée.
+
 Les images sont traitées en mémoire par les mêmes modèles que la caméra du serveur : présence,
 regard, reconnaissance, enregistrement des signatures de visage et analyse de scène selon vos
 réglages. Elles ne sont pas enregistrées et ne sont pas envoyées à OpenAI. Les descriptions de
@@ -44,6 +48,8 @@ La reconnexion utilise un délai progressif borné. Aucun retard d’images n’
   remplace le périphérique de capture, pas les modèles d’analyse.
 - **Accès refusé** : vérifiez l’autorisation caméra dans le navigateur, puis réessayez.
 - **Caméra introuvable** : choisissez une caméra disponible ou la caméra par défaut.
+- **Pas d’icône de caméra sur le miroir** : la capture n’a pas démarré. Vérifiez l’autorisation
+  caméra du navigateur.
 - **Caméra en pause** : vérifiez que cette page est le miroir actif et que la connexion est
   établie. Certains navigateurs suspendent la capture en arrière-plan : gardez le miroir visible.
 - **Image plus petite que prévu** : quand une image dépasse la limite, le miroir baisse seul

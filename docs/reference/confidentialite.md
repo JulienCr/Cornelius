@@ -135,4 +135,4 @@ Le bouton **Bloquer OpenAI**, dans le panneau **Conversation** de la rubrique **
 
 ## Caméra du navigateur (option)
 
-Si vous choisissez [la caméra du navigateur](../fonctionnalites/camera-navigateur.md), ses images quittent cet appareil pour rejoindre le serveur Cornelius par le réseau local chiffré. Elles sont analysées en mémoire, sans enregistrement ni envoi à OpenAI. La caméra du serveur reste le choix par défaut.
+Si vous choisissez [la caméra du navigateur](../fonctionnalites/camera-navigateur.md), ses images quittent cet appareil pour rejoindre le serveur Cornelius par le réseau local chiffré. Elles sont analysées en mémoire, sans enregistrement ni envoi à OpenAI. Tant que le navigateur capture des images, une petite icône de caméra s’affiche sur le miroir. La caméra du serveur reste le choix par défaut.
