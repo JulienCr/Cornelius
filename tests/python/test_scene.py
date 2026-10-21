@@ -1,6 +1,8 @@
 import io
 import json
 import math
+import signal
+import subprocess
 import sys
 import tempfile
 import threading
@@ -22,6 +24,7 @@ from scene import (
     ScenePreprocessor,
     SceneUnavailable,
     SceneWorker,
+    provider_survives_probe,
     select_provider,
     variant_files,
     visual_instruction,
@@ -212,7 +215,7 @@ class CaptionerTests(unittest.TestCase):
 
     def test_missing_files_report_unavailable_before_loading_onnx(self):
         captioner = SceneCaptioner(Path("models-absents"))
-        with self.assertRaises(SceneUnavailable):
+        with patch("scene.provider_survives_probe", return_value=True), self.assertRaises(SceneUnavailable):
             captioner.load()
 
 
@@ -578,7 +581,7 @@ class ProviderTests(unittest.TestCase):
             get_available_providers=lambda: ["CUDAExecutionProvider", "CPUExecutionProvider"],
             InferenceSession=lambda *a, **k: SimpleNamespace(get_providers=lambda: ["CPUExecutionProvider"]),
         )
-        with patch("scene.SceneTokenizer"), patch.object(SceneCaptioner, "_onnxruntime", return_value=ort), patch.object(SceneCaptioner, "files_present", return_value=True):
+        with patch("scene.SceneTokenizer"), patch("scene.provider_survives_probe", return_value=True), patch.object(SceneCaptioner, "_onnxruntime", return_value=ort), patch.object(SceneCaptioner, "files_present", return_value=True):
             automatic = SceneCaptioner(Path("missing"), device="auto")
             automatic.load()
             self.assertEqual(automatic.device_label(), "CPU")
@@ -586,6 +589,48 @@ class ProviderTests(unittest.TestCase):
             with self.assertRaises(SceneUnavailable):
                 explicit.load()
             self.assertIsNone(explicit.sessions)
+
+    def cuda_ort(self):
+        return SimpleNamespace(
+            SessionOptions=lambda: SimpleNamespace(),
+            get_available_providers=lambda: ["CUDAExecutionProvider", "CPUExecutionProvider"],
+            InferenceSession=lambda *a, **k: SimpleNamespace(get_providers=lambda: list(k["providers"])),
+        )
+
+    def load_with_probe(self, device, verdict):
+        captioner = SceneCaptioner(Path("missing"), device=device)
+        with patch("scene.SceneTokenizer"), patch("scene.provider_survives_probe", return_value=verdict) as probe, patch.object(
+            SceneCaptioner, "_onnxruntime", return_value=self.cuda_ort()
+        ), patch.object(SceneCaptioner, "files_present", return_value=True):
+            try:
+                captioner.load()
+            finally:
+                self.probe = probe
+        return captioner
+
+    def test_failed_probe_sends_auto_to_cpu_and_rejects_explicit_gpu(self):
+        self.assertEqual(self.load_with_probe("auto", False).label, "CPU")
+        with self.assertRaises(SceneUnavailable) as raised:
+            self.load_with_probe("gpu", False)
+        self.assertIn("planté", str(raised.exception))
+
+    def test_passing_probe_keeps_the_gpu_path(self):
+        self.assertEqual(self.load_with_probe("auto", True).label, "GPU CUDA")
+        self.probe.assert_called_once_with("CUDAExecutionProvider")
+
+    def test_probe_verdict_is_cached_and_crashes_are_failures(self):
+        crashed = subprocess.CompletedProcess([], -signal.SIGSEGV)
+        with patch("scene._probe_verdicts", {}), patch("scene.subprocess.run", return_value=crashed) as run:
+            self.assertFalse(provider_survives_probe("CUDAExecutionProvider"))
+            self.assertFalse(provider_survives_probe("CUDAExecutionProvider"))
+            run.assert_called_once()
+        with patch("scene._probe_verdicts", {}), patch("scene.subprocess.run", side_effect=subprocess.TimeoutExpired("x", 1)):
+            self.assertFalse(provider_survives_probe("CUDAExecutionProvider"))
+
+    def test_probe_child_process_registers_the_cpu_provider(self):
+        with patch("scene._probe_verdicts", {}):
+            self.assertTrue(provider_survives_probe("CPUExecutionProvider"))
+            self.assertFalse(provider_survives_probe("NoSuchExecutionProvider"))
 
     def test_auto_file_check_accepts_q4_fallback_on_a_gpu_install(self):
         with tempfile.TemporaryDirectory() as directory:

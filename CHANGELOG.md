@@ -6,6 +6,13 @@ Le fonctionnement actuel est décrit dans la [documentation](docs/README.md). Ce
 
 ## Non publié
 
+### 2026-10-22 : vision GPU protégée contre un plantage CUDA
+
+**Corrigé**
+
+- Un plantage du pilote CUDA ne tue plus la perception (présence, caméra, micro). Le fournisseur GPU est d’abord testé dans un processus séparé ; en cas d’échec, le mode automatique passe sur le processeur.
+- `nvidia-cuda-runtime` est figé en 13.0.96 dans `perception/requirements-gpu.txt` : les versions 13.1 et suivantes plantent avec certains pilotes (WSL2).
+
 ### 2026-10-22 : caméra du navigateur
 
 **Ajouté**

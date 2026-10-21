@@ -84,6 +84,16 @@ Mémoire estimée par l’administration pour chaque version :
 | 1,6B, « Équilibré » | environ 2,5 Go | environ 4 Go |
 | 3B, « Précis » | environ 4 Go | environ 7 Go |
 
+### La perception s’arrête juste après le démarrage (CUDA)
+
+Symptôme : l’écran affiche « Le service caméra n’est pas lancé » et `perception.err.log` contient `No registered plugin EP device found for 'CUDAExecutionProvider'` ou un arrêt brutal (segfault).
+
+- Le paquet `nvidia-cuda-runtime` doit rester en 13.0.96, comme dans `perception/requirements-gpu.txt`. Une version 13.1 ou plus plante avec certains pilotes. Pour corriger : `.venv/bin/python -m pip install -r perception/requirements-gpu.txt`.
+- Sous WSL, le pilote vient de Windows. Retirez les paquets `libnvidia-compute-*` installés par apt dans WSL : leurs bibliothèques périmées masquent celles de Windows.
+- Après une mise à jour du pilote Windows, lancez `wsl --shutdown` puis rouvrez WSL.
+
+Cornelius teste le GPU dans un processus séparé avant de l’utiliser. Si ce test échoue, le mode automatique passe sur le processeur et le mode « Carte graphique » signale l’erreur. Le résultat est écrit une fois dans le journal de la perception (`[vision] test ...`).
+
 ## Génération d’images
 
 ### Installation

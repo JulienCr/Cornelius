@@ -9,6 +9,7 @@ the SceneCaptioner constructor.
 import json
 import math
 import os
+import subprocess
 import sys
 import threading
 import time
@@ -76,6 +77,36 @@ GPU_PROVIDERS = (
 )
 CPU_PROVIDER = ("CPUExecutionProvider", "cpu", "CPU")
 GPU_DEVICES = {"cuda", "rocm", "migraphx", "dml"}
+
+PROBE_SCRIPT = Path(__file__).with_name("provider_probe.py")
+PROBE_TIMEOUT_SECONDS = 60
+_probe_verdicts = {}
+_probe_lock = threading.Lock()
+
+
+def provider_survives_probe(provider):
+    """Create a tiny session with the provider in a child process, once per provider.
+
+    A driver crash (SIGSEGV) would kill the whole perception worker if it happened here.
+    """
+    with _probe_lock:
+        if provider in _probe_verdicts:
+            return _probe_verdicts[provider]
+        try:
+            result = subprocess.run(
+                [sys.executable, "-I", str(PROBE_SCRIPT), provider],
+                capture_output=True,
+                timeout=PROBE_TIMEOUT_SECONDS,
+            )
+            ok, outcome = result.returncode == 0, "code " + str(result.returncode)
+            if result.returncode < 0:
+                outcome = "signal " + str(-result.returncode)
+        except (subprocess.TimeoutExpired, OSError) as error:
+            ok, outcome = False, type(error).__name__
+        print("[vision] test " + provider + " : " + ("ok" if ok else "échec (" + outcome + ")"), file=sys.stderr)
+        _probe_verdicts[provider] = ok
+        return ok
+
 
 
 def select_provider(available, device="auto", preferred=None):
@@ -502,6 +533,12 @@ class SceneCaptioner:
                 return
             ort = self._onnxruntime()
             provider, device_type, label = self.resolve_provider()
+            if device_type in GPU_DEVICES and not provider_survives_probe(provider):
+                if self.device == "gpu":
+                    raise SceneUnavailable(
+                        "Le fournisseur GPU a planté lors d’un test. Vérifiez les pilotes et les versions de CUDA."
+                    )
+                provider, device_type, label = CPU_PROVIDER
             variant = self._variant_for_load(device_type)
             if variant == "cpu" and device_type in GPU_DEVICES:
                 # Auto without the fp16 files: keep vision alive on the CPU.
