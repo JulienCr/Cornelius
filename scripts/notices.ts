@@ -84,7 +84,11 @@ function installedManifest(
   const dir = `${parentName.replace('/', '+')}@${parentVersion}`;
   const manifest = join(root, 'node_modules', '.pnpm', dir, 'node_modules', name, 'package.json');
   if (!existsSync(manifest)) return undefined;
-  const json = JSON.parse(readFileSync(manifest, 'utf8')) as { version?: string };
+  const json = JSON.parse(readFileSync(manifest, 'utf8')) as {
+    version?: string;
+    license?: unknown;
+    licenses?: unknown;
+  };
   return { version: json.version, license: licenseOf(json) };
 }
 
