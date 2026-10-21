@@ -141,7 +141,7 @@ Champs propres à chaque module :
 - **Météo** : un jeton gratuit de [Météo Concept](https://api.meteo-concept.com/) est nécessaire. Collez-le dans la carte du module (ou dans **Clés et jetons**). Indiquez ensuite le « Code INSEE » de la commune (Paris : 75056), ou sa « Latitude » et sa « Longitude », et les « Jours de prévision » (de 1 à 7).
 - **Transports** : réservé à l’Île-de-France. Un jeton PRIM gratuit d’[Île-de-France Mobilités](https://prim.iledefrance-mobilites.fr/) est nécessaire : collez-le dans la carte du module (ou dans **Clés et jetons**). L’« Arrêt » et la « Direction » se choisissent par recherche.
 
-Tant qu’un jeton manque, la carte du module l’explique et **Ajouter une source** reste grisé. `npm run setup` n’ajoute pas ces lignes : copiez-les depuis `.env.example`. Les fiches [Heure](../../addons/clock/README.md), [Météo](../../addons/weather/README.md) et [Transports](../../addons/transit/README.md) détaillent chaque module.
+Tant qu’un jeton manque, la carte du module l’explique et **Ajouter une source** reste grisé. `pnpm run setup` n’ajoute pas ces lignes : copiez-les depuis `.env.example`. Les fiches [Heure](../../addons/clock/README.md), [Météo](../../addons/weather/README.md) et [Transports](../../addons/transit/README.md) détaillent chaque module.
 
 ## En cas de problème
 

@@ -463,7 +463,7 @@ Respecte le contrat v1 et ses limites. N'invente ni adresse, ni traitement par o
 de l'outil à la demande. Si le besoin dépasse le contrat, décris l'évolution
 nécessaire avant de l'écrire. Ne modifie le cœur que pour un branchement indispensable
 et explique-le. Livre la définition, les schémas, des réponses fictives, des tests lancés
-par npm test et la fiche addons/[id]/README.md. Vérifie npm run check et npm test.
+par pnpm test et la fiche addons/[id]/README.md. Vérifie pnpm check et pnpm test.
 Indique ce qui est testé et ce qui reste à essayer avec le vrai fournisseur et à la voix.
 ```
 

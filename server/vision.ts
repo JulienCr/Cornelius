@@ -335,7 +335,7 @@ export class VisionBridge {
       description,
     });
     if (this.history.length > maxHistory) this.history.length = maxHistory;
-    // Durées et échecs rejoignent le journal pour `npm run mesures`, sans description.
+    // Durées et échecs rejoignent le journal pour `pnpm mesures`, sans description.
     const details = {
       interactionId: pending.scope.interactionId,
       trigger: pending.trigger,

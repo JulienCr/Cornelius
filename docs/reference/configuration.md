@@ -4,7 +4,7 @@ Cette page liste tout ce qui se règle hors de l’administration : les variable
 
 ## Le fichier `.env`
 
-Le fichier `.env` se trouve à la racine du projet. `npm run setup` le crée avec cinq lignes : `PORT`, `CORNELIUS_DATABASE`, `CORNELIUS_ADMIN_PASSWORD`, `CORNELIUS_PERCEPTION_TOKEN` (tiré au hasard) et `OPENAI_API_KEY` (vide). Relancé sur un fichier existant, il le garde, ajoute seulement le mot de passe, le jeton de la perception ou la ligne de la clé OpenAI s’ils manquent, et retire d’anciennes lignes devenues inutiles.
+Le fichier `.env` se trouve à la racine du projet. `pnpm run setup` le crée avec cinq lignes : `PORT`, `CORNELIUS_DATABASE`, `CORNELIUS_ADMIN_PASSWORD`, `CORNELIUS_PERCEPTION_TOKEN` (tiré au hasard) et `OPENAI_API_KEY` (vide). Relancé sur un fichier existant, il le garde, ajoute seulement le mot de passe, le jeton de la perception ou la ligne de la clé OpenAI s’ils manquent, et retire d’anciennes lignes devenues inutiles.
 
 Le modèle `.env.example` décrit les autres lignes possibles. Copiez celles qui vous servent dans `.env`. Une ligne absente ou commentée (`#`) garde la valeur par défaut.
 
@@ -17,7 +17,7 @@ Quelques règles :
 
 Qui lit le fichier :
 
-- le **serveur** (Node.js), lancé avec l’option `--env-file-if-exists=.env` par les scripts, par `npm start` et par le service systemd ;
+- le **serveur** (Node.js), lancé avec l’option `--env-file-if-exists=.env` par les scripts, par `pnpm start` et par le service systemd ;
 - la **perception** (`perception/worker.py`) et le **générateur d’images** (`image_generation/worker.py`), qui le lisent eux-mêmes au démarrage ;
 - **Vite**, en développement, qui y prend seulement `PORT` ;
 - les **scripts** `scripts/*.sh` et `scripts/*.ps1`, qui y prennent seulement `PORT`.
@@ -29,7 +29,7 @@ Ne publiez jamais ce fichier : il contient le mot de passe et les clés. Il est 
 | Variable | Défaut | Effet | Lue par |
 |---|---|---|---|
 | `OPENAI_API_KEY` | vide | Clé de l’API OpenAI, valeur de secours : une clé saisie dans **Mise en route → Clés et jetons** passe avant. Sans clé, aucune conversation ne s’ouvre et la mémoire ne retient rien. La rubrique **Mise en route** affiche alors l’étape **Clé OpenAI** à faire. | serveur |
-| `CORNELIUS_ADMIN_PASSWORD` | `cornelius` (écrit par `npm run setup`) | Mot de passe de départ de l’administration, 4 caractères au moins. Un mot de passe choisi dans **Mise en route** le remplace (seule son empreinte est gardée en base). Le serveur refuse de démarrer sans lui. Tant qu’il vaut `cornelius`, la **Mise en route** demande de le changer. | serveur |
+| `CORNELIUS_ADMIN_PASSWORD` | `cornelius` (écrit par `pnpm run setup`) | Mot de passe de départ de l’administration, 4 caractères au moins. Un mot de passe choisi dans **Mise en route** le remplace (seule son empreinte est gardée en base). Le serveur refuse de démarrer sans lui. Tant qu’il vaut `cornelius`, la **Mise en route** demande de le changer. | serveur |
 | `CORNELIUS_LOGIN_RATE_LIMIT` | `10` | Nombre de tentatives de connexion à l’administration permises par minute. Entier de 1 ou plus. | serveur |
 
 ## Serveur et base de données
@@ -38,7 +38,7 @@ Ne publiez jamais ce fichier : il contient le mot de passe et les clés. Il est 
 |---|---|---|---|
 | `PORT` | `3000` | Port du serveur, de 1024 à 65535, en HTTP sur la machine elle-même (`127.0.0.1`) seulement. La perception s’y connecte, et Vite y renvoie ses requêtes en développement. Les autres appareils passent par `CORNELIUS_HTTPS_PORT`. | serveur, perception, Vite, scripts |
 | `CORNELIUS_DATABASE` | `data/cornelius.sqlite` | Chemin de la base SQLite, relatif à la racine du projet. Le journal s’écrit dans un dossier `logs/` placé à côté, et les copies de sécurité de la base aussi. La valeur spéciale `:memory:` garde la base en mémoire vive, sans fichier : elle sert aux tests. | serveur |
-| `CORNELIUS_PERCEPTION_TOKEN` | créé par `npm run setup` | Jeton partagé entre le serveur et la perception, 32 caractères au moins. Sans lui, la perception refuse de démarrer et le serveur la refuse. | serveur, perception |
+| `CORNELIUS_PERCEPTION_TOKEN` | créé par `pnpm run setup` | Jeton partagé entre le serveur et la perception, 32 caractères au moins. Sans lui, la perception refuse de démarrer et le serveur la refuse. | serveur, perception |
 
 ## Réseau local
 
@@ -111,7 +111,7 @@ Ces variables existent dans le code, mais ne se mettent pas dans `.env` en usage
 | `CORNELIUS_IMAGE_GENERATION_TOKEN` | Jeton entre le serveur et le générateur d’images. Le serveur en tire un au hasard à chaque démarrage et le transmet lui-même au générateur. | serveur, générateur d’images |
 | `CORNELIUS_ORIGIN` | Adresse du serveur pour un générateur d’images lancé à la main. Le serveur passe déjà cette adresse au générateur qu’il lance. Défaut : `http://127.0.0.1:3000`. | générateur d’images |
 | `PYTHONUTF8` | Mis à `1` par le serveur pour les programmes Python qu’il lance, afin que leurs messages restent lisibles sous Windows. | Python |
-| `CORNELIUS_E2E_PORT` | Port du serveur lancé par les tests navigateur (`npm run test:e2e`). Défaut : `3101`. | `tests/e2e/env.ts`, `playwright.config.ts` |
+| `CORNELIUS_E2E_PORT` | Port du serveur lancé par les tests navigateur (`pnpm test:e2e`). Défaut : `3101`. | `tests/e2e/env.ts`, `playwright.config.ts` |
 
 ## Les ports
 
@@ -138,7 +138,7 @@ Les ports `3000` et `5173` n’écoutent que sur `127.0.0.1`. Seul le port `3443
 | `models/` | Modèles locaux : `yunet.onnx` (détection des visages), `sface.onnx` (reconnaissance), `silero.onnx` (détection de la parole), `lfm2.5-vl-450m/`, `lfm2.5-vl-1.6b/`, `lfm2.5-vl-3b/` (vision), `openwakeword/` et `cornelius.onnx` (mot d’appel), `image-generation/<modèle>/` (images). Les modèles de visages, de parole et de vision sont téléchargés avec leur licence. | `perception/download_models.py`, l’administration, `perception/install_wake_features.py` |
 | `.venv/` | L’environnement Python 3.12 de la perception. | `scripts/install-linux.sh`, ou à la main sous Windows |
 | `.venv-image/` | L’environnement Python séparé du générateur d’images (PyTorch, Diffusers). | l’installation d’un modèle depuis **Modules → Génération d’image** |
-| `dist/web/` | L’interface compilée, servie en production. | `npm run build` (les scripts `start` le lancent si besoin) |
+| `dist/web/` | L’interface compilée, servie en production. | `pnpm build` (les scripts `start` le lancent si besoin) |
 | `.local/` | Sorties jetables : captures et résultats des tests navigateur, outil `uv` de l’installateur Linux. Tout peut être supprimé. | tests, `scripts/install-linux.sh` |
 
 `data/` et la base, `models/` (sauf `models/cornelius.onnx` et sa licence), `.venv/`, `.venv-image/`, `dist/`, `.local/` et `.env` sont exclus de Git. Avant de publier le dépôt, voir [Licences](licences.md#avant-de-publier-le-dépôt).

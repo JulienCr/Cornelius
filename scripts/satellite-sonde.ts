@@ -2,7 +2,7 @@
  * Sonde des satellites (étape 0) : vérifie qu'une session Live tient sur un WebSocket principal
  * en PCM16 mono 16 kHz, dans les deux sens, comme le fera le relais des satellites.
  *
- *   npx tsx --env-file-if-exists=.env scripts/satellite-sonde.ts [entrée.wav] [sortie.wav]
+ *   pnpm exec tsx --env-file-if-exists=.env scripts/satellite-sonde.ts [entrée.wav] [sortie.wav]
  *
  * Avec un WAV (PCM16 mono 16 kHz), il est envoyé au rythme réel par trames de 80 ms, comme un
  * satellite, suivi de silence. Sans WAV, une consigne fait parler Cornelius. La réponse est

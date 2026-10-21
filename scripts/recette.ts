@@ -30,7 +30,7 @@ async function main() {
     'Laissez le serveur tourner et restez face à la caméra : la session s’ouvre et se ferme ',
   );
   console.log('selon votre présence réelle. Répondez naturellement, puis validez chaque étape.');
-  console.log('À la fin, lancez : npm run mesures\n');
+  console.log('À la fin, lancez : pnpm mesures\n');
 
   if (list) {
     printProtocol(protocol);
@@ -72,7 +72,7 @@ async function main() {
   console.log('\nRecette terminée.');
   console.log('- Comptez la compréhension sur les questions (objectif 49/50).');
   console.log('- Comptez les ouvertures injustifiées pendant les passages de tiers.');
-  console.log('Tableau §3 : npm run mesures');
+  console.log('Tableau §3 : pnpm mesures');
 }
 
 async function section(

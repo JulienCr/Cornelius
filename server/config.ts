@@ -33,14 +33,14 @@ export interface AppConfig {
   tlsKeyFingerprint?: string;
 }
 
-/** Mot de passe écrit par `npm run setup` et `.env.example`, à changer après l’installation. */
+/** Mot de passe écrit par `pnpm run setup` et `.env.example`, à changer après l’installation. */
 export const DEFAULT_ADMIN_PASSWORD = 'cornelius';
 
 export function loadConfig(): AppConfig & { port: number } {
   const adminPassword = process.env.CORNELIUS_ADMIN_PASSWORD ?? '';
   if (adminPassword.length < 4) {
     throw new Error(
-      'Définissez CORNELIUS_ADMIN_PASSWORD (4 caractères minimum) dans .env, ou lancez npm run setup.',
+      'Définissez CORNELIUS_ADMIN_PASSWORD (4 caractères minimum) dans .env, ou lancez pnpm run setup.',
     );
   }
   const port = Number(process.env.PORT ?? 3000);

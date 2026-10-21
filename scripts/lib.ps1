@@ -124,7 +124,7 @@ function Test-CorneliusPrerequisites {
     }
   }
   if (-not (Test-Path -LiteralPath (Join-Path $Root '.env'))) {
-    $problems += 'Fichier .env absent : lancez « npm run setup » à la racine du projet.'
+    $problems += 'Fichier .env absent : lancez « pnpm run setup » à la racine du projet.'
   }
   return $problems
 }
@@ -152,21 +152,38 @@ function Assert-CorneliusPrerequisites {
   return $node
 }
 
-function Resolve-CorneliusNpm {
-  foreach ($name in @('npm.cmd', 'npm')) {
+function Resolve-CorneliusPnpm {
+  foreach ($name in @('pnpm.cmd', 'pnpm')) {
     $command = Get-Command $name -ErrorAction SilentlyContinue
     if ($command) { return $command.Source }
+  }
+  # Corepack (livré avec Node.js 24) fournit pnpm : on l'active une fois, puis on cherche à nouveau.
+  $corepack = Get-Command 'corepack.cmd', 'corepack' -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($corepack) {
+    $env:COREPACK_ENABLE_DOWNLOAD_PROMPT = '0'
+    & $corepack.Source enable *> $null
+    if (-not (Get-Command 'pnpm.cmd', 'pnpm' -ErrorAction SilentlyContinue)) {
+      # Without administrator rights, install the shims in a per-user directory.
+      $bin = Join-Path $env:LOCALAPPDATA 'Cornelius\bin'
+      New-Item -ItemType Directory -Force -Path $bin | Out-Null
+      & $corepack.Source enable --install-directory $bin *> $null
+      $env:PATH = "$bin;$env:PATH"
+    }
+    foreach ($name in @('pnpm.cmd', 'pnpm')) {
+      $command = Get-Command $name -ErrorAction SilentlyContinue
+      if ($command) { return $command.Source }
+    }
   }
   return $null
 }
 
-# Dépendances npm complètes et à jour : les outils lancés par les scripts sont bien installés,
-# et package-lock.json n'a pas changé depuis la dernière installation réussie (après un git pull,
-# par exemple). Un npm ci interrompu, ou gêné par un fichier verrouillé sous Windows, laisse un
+# Dépendances Node complètes et à jour : les outils lancés par les scripts sont bien installés,
+# et pnpm-lock.yaml n'a pas changé depuis la dernière installation réussie (après un git pull,
+# par exemple). Un pnpm install interrompu, ou gêné par un fichier verrouillé sous Windows, laisse un
 # node_modules incomplet : « 'tsc' n'est pas reconnu » ou « Cannot find package …\tsx\index.js ».
 function Test-CorneliusDependencies {
   $modules = Join-Path $Root 'node_modules'
-  $marker = Join-Path $modules '.package-lock.json'
+  $marker = Join-Path $modules '.modules.yaml'
   $shim = 'tsc'
   if ($PSVersionTable.PSEdition -eq 'Desktop' -or $IsWindows) { $shim = 'tsc.cmd' }
   $required = @(
@@ -179,29 +196,29 @@ function Test-CorneliusDependencies {
   foreach ($path in $required) {
     if (-not (Test-Path -LiteralPath $path)) { return $false }
   }
-  $lock = Join-Path $Root 'package-lock.json'
+  $lock = Join-Path $Root 'pnpm-lock.yaml'
   if (-not (Test-Path -LiteralPath $lock)) { return $true }
-  # npm écrit son marqueur en dernier ; quelques secondes de marge pour les horloges de fichiers.
+  # pnpm réécrit son marqueur en dernier ; quelques secondes de marge pour les horloges de fichiers.
   return (Get-Item -LiteralPath $lock).LastWriteTime -le (Get-Item -LiteralPath $marker -Force).LastWriteTime.AddSeconds(10)
 }
 
-# Installe les dépendances exactes (npm ci) si elles manquent, sont incomplètes ou ont changé.
-# Cornelius est arrêté d'abord : sous Windows, un fichier ouvert par le serveur bloquerait npm ci.
+# Installe les dépendances exactes (pnpm install --frozen-lockfile) si elles manquent, sont incomplètes
+# ou ont changé. Cornelius est arrêté d'abord : sous Windows, un fichier ouvert par le serveur bloquerait pnpm.
 function Sync-CorneliusDependencies {
   if (Test-CorneliusDependencies) { return }
-  $npm = Resolve-CorneliusNpm
-  if (-not $npm) { throw 'npm est introuvable dans le PATH : réinstallez Node.js 24, puis rouvrez PowerShell.' }
-  Write-Host 'Dépendances absentes, incomplètes ou à mettre à jour : installation (npm ci), quelques minutes…'
+  $pnpm = Resolve-CorneliusPnpm
+  if (-not $pnpm) { throw 'pnpm est introuvable : lancez corepack enable (livré avec Node.js 24) ou installez pnpm 10, puis rouvrez PowerShell.' }
+  Write-Host 'Dépendances absentes, incomplètes ou à mettre à jour : installation (pnpm install), quelques minutes…'
   & (Join-Path $ScriptRoot 'stop.ps1')
   Push-Location $Root
   try {
-    & $npm ci
+    & $pnpm install --frozen-lockfile
     $code = $LASTEXITCODE
   } finally {
     Pop-Location
   }
   if ($code -ne 0 -or -not (Test-CorneliusDependencies)) {
-    throw ("L'installation des dépendances a échoué (npm ci, code $code). Fermez ce qui utilise le " +
+    throw ("L'installation des dépendances a échoué (pnpm install, code $code). Fermez ce qui utilise le " +
       'dossier du projet (éditeur, autre terminal), supprimez le dossier node_modules, puis relancez.')
   }
 }
@@ -253,7 +270,7 @@ function Start-CorneliusService {
   return $process
 }
 
-# Serveur (Fastify) sur le port de .env, sauf s'il écoute déjà. Node directement, sans npm.cmd :
+# Serveur (Fastify) sur le port de .env, sauf s'il écoute déjà. Node directement, sans pnpm.cmd :
 # le PID suivi est celui du serveur et les erreurs de démarrage arrivent telles quelles dans
 # backend.err.log. Renvoie le processus lancé, ou $null si le serveur tournait déjà.
 function Start-CorneliusBackend {
