@@ -171,13 +171,14 @@ export class CameraBridge {
     if (event.mode) this.state.mode = event.mode;
     this.state.actual = event.actual ?? null;
     if (this.selection && event.requestId === this.selection.requestId) {
-      if (!event.error && event.selectedId === this.selection.id)
+      if (!event.error && event.selectedId === this.selection.id && event.selectedId !== 'browser')
         this.db
           .prepare('UPDATE camera_preferences SET device_id = ? WHERE id = 1')
           .run(event.selectedId);
       this.selection = null;
       this.state.changing = false;
     }
+    if (event.selectedId === 'browser') this.restored = true;
     if (!this.restored) {
       this.restored = true;
       // Résolution enregistrée envoyée à une perception qui démarre (ou ancienne : sans effet).

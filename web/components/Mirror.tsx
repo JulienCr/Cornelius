@@ -3,6 +3,7 @@ import { TriangleAlert } from 'lucide-react';
 import { mirrorBlocker, type MirrorBlockerId } from '../../shared/readiness';
 import type { DisplayCard, SessionPhase, VoiceActivity } from '../../shared/types';
 import type { MirrorConnection } from '../useMirror';
+import { BrowserCamera } from '../camera/BrowserCamera';
 import { Orb } from './Orb';
 import { AmbientModules } from './AmbientModules';
 import { useVoice } from '../audio/useVoice';
@@ -249,6 +250,7 @@ export function Mirror({ connection }: { connection: MirrorConnection }) {
           </section>
         )}
         <div className="mirror-footer">
+          <BrowserCamera config={connection.cameraConfig} active={fresh && !interrupted} />
           {interrupted && (
             // Le serveur a donné la main à un autre onglet : ne la reprendre qu’à la demande.
             <div className="mirror-hint">

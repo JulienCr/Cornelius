@@ -6,6 +6,14 @@ Le fonctionnement actuel est décrit dans la [documentation](docs/README.md). Ce
 
 ## Non publié
 
+### 2026-10-22 : caméra du navigateur
+
+**Ajouté**
+
+- Option « Sur l’appareil qui affiche le miroir » : la caméra du navigateur qui affiche le miroir remplace celle du serveur. Les images sont analysées sur le serveur, sans enregistrement. Voir [la caméra du navigateur](docs/fonctionnalites/camera-navigateur.md).
+- Une petite icône de caméra s’affiche en bas à droite du miroir tant que le navigateur capture des images. Elle tient lieu de voyant.
+- Une image trop volumineuse n’est plus perdue : le miroir baisse seul la qualité, puis la taille, jusqu’à passer sous la limite.
+
 ### 2026-10-21 : passage à pnpm
 
 **Modifié**

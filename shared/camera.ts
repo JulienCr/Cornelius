@@ -1,3 +1,23 @@
+export type CameraSource = 'server' | 'browser';
+/** Images JPEG bornées ; une seule image en vol jusqu’à l’accusé de la perception. */
+export const BROWSER_CAMERA_MAX_BYTES = 250_000;
+/** JPEG settings tried in order when a frame exceeds the limit: quality first, then size. */
+export const BROWSER_CAMERA_ENCODING_STEPS: readonly { quality: number; scale: number }[] = [
+  { quality: 0.7, scale: 1 },
+  { quality: 0.55, scale: 1 },
+  { quality: 0.4, scale: 1 },
+  { quality: 0.4, scale: 0.75 },
+  { quality: 0.4, scale: 0.5 },
+  { quality: 0.4, scale: 0.35 },
+];
+export interface BrowserCameraConfig {
+  schemaVersion: 1;
+  type: 'camera_config';
+  source: CameraSource;
+  enabled: boolean;
+  mode: CameraMode;
+}
+
 /** Résolution et cadence de la caméra, appliquées par la perception. */
 export interface CameraMode {
   width: number;
@@ -45,4 +65,23 @@ export function isCameraMode(value: unknown): value is CameraMode {
       (resolution) => resolution.width === mode.width && resolution.height === mode.height,
     ) && CAMERA_FRAME_RATES.some((rate) => rate.fps === mode.fps)
   );
+}
+
+/** The worker reserves 1024 and 2562 byte packets for PCM audio. A JPEG comment
+ * avoids ambiguous lengths without changing pixels or the existing audio protocol. */
+export function encodeBrowserCameraFrame(
+  image: ArrayBuffer,
+  sequence: number,
+): Uint8Array<ArrayBuffer> {
+  const jpeg = new Uint8Array(image);
+  const padding = [1024, 2562].includes(jpeg.byteLength + 5) ? 4 : 0;
+  const frame = new Uint8Array(jpeg.byteLength + 5 + padding);
+  frame[0] = 0x43;
+  new DataView(frame.buffer).setUint32(1, sequence);
+  if (padding) {
+    frame.set(jpeg.subarray(0, 2), 5);
+    frame.set([255, 254, 0, 2], 7);
+    frame.set(jpeg.subarray(2), 11);
+  } else frame.set(jpeg, 5);
+  return frame;
 }
