@@ -24,7 +24,8 @@ Les images JPEG voyagent sur un WebSocket dédié, chiffré en WSS sur le résea
 le serveur Cornelius, puis vers sa perception par la boucle locale. Il n’y a ni serveur relais
 externe, ni port supplémentaire à ouvrir, ni clé de perception transmise au navigateur.
 La route exige la même origine, un appareil autorisé et le miroir actif. Une nouvelle page du
-miroir retire l’ancien flux ; une page d’administration ne peut pas produire d’images.
+miroir retire l’ancien flux. La garantie porte sur l’appareil, pas sur la page : sur l’appareil
+autorisé, toutes les pages du même navigateur partagent l’identité du miroir.
 
 Les images sont traitées en mémoire par les mêmes modèles que la caméra du serveur : présence,
 regard, reconnaissance, enregistrement des signatures de visage et analyse de scène selon vos
