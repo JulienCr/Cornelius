@@ -1,33 +1,103 @@
-// Met à jour, dans THIRD_PARTY_NOTICES.md, la liste des bibliothèques npm installées par npm ci
-// (package-lock.json) et leur licence, lue dans package-lock.json seul pour être la même partout.
-// Usage : npm run notices (après un changement de dépendances). --check échoue si la liste est périmée.
-import { readFileSync, writeFileSync } from 'node:fs';
+// Met à jour, dans THIRD_PARTY_NOTICES.md, la liste des bibliothèques npm installées par
+// pnpm install --frozen-lockfile (pnpm-lock.yaml) et leur licence.
+// Usage : pnpm notices (après un changement de dépendances). --check échoue si la liste est périmée.
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { parse } from 'yaml';
 
 const root = join(import.meta.dirname, '..');
 const file = join(root, 'THIRD_PARTY_NOTICES.md');
 const start = '<!-- npm:début -->';
 const end = '<!-- npm:fin -->';
 
-interface LockPackage {
-  version?: string;
-  license?: string;
-  dev?: boolean;
+type Deps = Record<string, string | { version: string }>;
+interface Lock {
+  importers: Record<string, { dependencies?: Deps; optionalDependencies?: Deps }>;
+  snapshots: Record<string, { dependencies?: Deps; optionalDependencies?: Deps }>;
+}
+
+// Strips the peer suffix: "react-dom@19.3.0(react@19.3.0)" -> "react-dom@19.3.0".
+const bare = (key: string): string => key.replace(/\(.*$/, '');
+
+function splitKey(key: string): [string, string] {
+  const at = bare(key).lastIndexOf('@');
+  return [key.slice(0, at), key.slice(at + 1).replace(/\(.*$/, '')];
+}
+
+function productionKeys(lock: Lock): Set<string> {
+  const seen = new Set<string>();
+  const visit = (name: string, dep: string | { version: string }): void => {
+    const version = typeof dep === 'string' ? dep : dep.version;
+    const key = `${name}@${version}`;
+    if (seen.has(key) || !lock.snapshots[key]) return;
+    seen.add(key);
+    const snapshot = lock.snapshots[key];
+    for (const group of [snapshot.dependencies, snapshot.optionalDependencies]) {
+      for (const [child, v] of Object.entries(group ?? {})) visit(child, v);
+    }
+  };
+  const importer = lock.importers['.'];
+  for (const group of [importer?.dependencies, importer?.optionalDependencies]) {
+    for (const [name, dep] of Object.entries(group ?? {})) visit(name, dep);
+  }
+  return new Set([...seen].map(bare));
+}
+
+function licenseOf(manifest: { license?: unknown }): string | undefined {
+  const license = manifest.license;
+  if (typeof license === 'string') return license;
+  const type = (license as { type?: unknown } | undefined)?.type;
+  return typeof type === 'string' ? type : undefined;
+}
+
+// Platform-specific optional packages are absent from node_modules on other machines, so their
+// licence comes from the table already committed: the output stays the same everywhere.
+function committedLicenses(): Map<string, string> {
+  const text = existsSync(file) ? readFileSync(file, 'utf8') : '';
+  const from = text.indexOf(start);
+  const licenses = new Map<string, string>();
+  if (from < 0) return licenses;
+  for (const line of text.slice(from, text.indexOf(end)).split('\n')) {
+    const cells = line.split('|').map((cell) => cell.trim());
+    const [, name, version, license] = cells;
+    if (name && version && license && version !== 'Version' && license !== 'voir le paquet') {
+      licenses.set(`${name}@${version}`, license);
+    }
+  }
+  return licenses;
+}
+
+function installedLicenses(): Map<string, string> {
+  const store = join(root, 'node_modules', '.pnpm');
+  const licenses = new Map<string, string>();
+  if (!existsSync(store)) return licenses;
+  for (const dir of readdirSync(store)) {
+    const at = dir.indexOf('@', 1);
+    if (at < 0) continue;
+    const name = dir.slice(0, at).replace('+', '/');
+    const version = dir.slice(at + 1).replace(/_.*$/, '');
+    const manifest = join(store, dir, 'node_modules', name, 'package.json');
+    if (!existsSync(manifest)) continue;
+    const license = licenseOf(JSON.parse(readFileSync(manifest, 'utf8')));
+    if (license) licenses.set(`${name}@${version}`, license);
+  }
+  return licenses;
 }
 
 export function npmNotices(): string {
-  const lock = JSON.parse(readFileSync(join(root, 'package-lock.json'), 'utf8')) as {
-    packages: Record<string, LockPackage>;
-  };
+  const lock = parse(readFileSync(join(root, 'pnpm-lock.yaml'), 'utf8')) as Lock;
+  const production = productionKeys(lock);
+  const installed = installedLicenses();
+  const committed = committedLicenses();
   const rows = new Map<string, string>();
-  for (const [path, entry] of Object.entries(lock.packages)) {
-    if (!path) continue;
-    const name = path.slice(path.lastIndexOf('node_modules/') + 'node_modules/'.length);
-    const key = `${name}@${entry.version}`;
+  for (const snapshot of Object.keys(lock.snapshots)) {
+    const key = bare(snapshot);
     if (rows.has(key)) continue;
+    const [name, version] = splitKey(key);
+    const license = installed.get(key) ?? committed.get(key) ?? 'voir le paquet';
     rows.set(
       key,
-      `| ${name} | ${entry.version ?? ''} | ${entry.license ?? 'voir le paquet'} | ${entry.dev ? 'outil' : 'exécution'} |`,
+      `| ${name} | ${version} | ${license} | ${production.has(key) ? 'exécution' : 'outil'} |`,
     );
   }
   return [
@@ -51,7 +121,7 @@ if (process.argv[1] && import.meta.filename === process.argv[1]) {
   const next = updated(current);
   if (process.argv.includes('--check')) {
     if (next !== current) {
-      console.error('THIRD_PARTY_NOTICES.md est périmé : lancez npm run notices.');
+      console.error('THIRD_PARTY_NOTICES.md est périmé : lancez pnpm notices.');
       process.exit(1);
     }
   } else {

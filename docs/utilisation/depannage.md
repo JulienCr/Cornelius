@@ -52,11 +52,11 @@ Get-Content data\run\logs\backend.err.log -Tail 50
 
 Messages les plus fréquents :
 
-- « Définissez CORNELIUS_ADMIN_PASSWORD (4 caractères minimum) dans .env, ou lancez npm run setup. » : le mot de passe manque ou fait moins de 4 caractères ;
+- « Définissez CORNELIUS_ADMIN_PASSWORD (4 caractères minimum) dans .env, ou lancez pnpm run setup. » : le mot de passe manque ou fait moins de 4 caractères ;
 - « PORT invalide. » : `PORT` doit être un nombre entier de 1024 à 65535 ;
 - « listen EADDRINUSE » : le port est occupé (voir le tableau) ;
-- « L’installation des dépendances a échoué (npm ci) » : fermez ce qui utilise le dossier du projet, supprimez `node_modules`, puis relancez le script de démarrage, qui réinstalle les dépendances tout seul ;
-- « Fichier .env absent : lancez « npm run setup » à la racine du projet. » : l’installation n’est pas terminée.
+- « L’installation des dépendances a échoué (pnpm install) » : fermez ce qui utilise le dossier du projet, supprimez `node_modules`, puis relancez le script de démarrage, qui réinstalle les dépendances tout seul ;
+- « Fichier .env absent : lancez « pnpm run setup » à la racine du projet. » : l’installation n’est pas terminée.
 
 ### Redémarrer Cornelius
 
@@ -96,14 +96,14 @@ La rubrique **État du système** complète le journal : état des services, der
 Quand Cornelius semble lent à répondre, la commande suivante lit les mesures écrites dans le journal (`data/logs/cornelius.log` et ses archives) et les résume en tableau : délai de réponse, interruption, ouverture de la conversation, images par seconde de l’orbe, vision locale, fermetures.
 
 ```sh
-npm run mesures
+pnpm mesures
 ```
 
 ```powershell
-npm run mesures
+pnpm mesures
 ```
 
-Les mesures viennent de conversations réelles : tenez-en quelques-unes devant le miroir avant de lancer la commande. Pour lire un autre fichier, donnez son chemin : `npm run mesures -- chemin/vers/cornelius.log`. Le protocole de recette complet est décrit dans [Tests et recette](../developpement/tests-et-recette.md).
+Les mesures viennent de conversations réelles : tenez-en quelques-unes devant le miroir avant de lancer la commande. Pour lire un autre fichier, donnez son chemin : `pnpm mesures chemin/vers/cornelius.log`. Le protocole de recette complet est décrit dans [Tests et recette](../developpement/tests-et-recette.md).
 
 ## Demander de l’aide
 
@@ -113,7 +113,7 @@ Décrivez ce que vous faisiez, ce que vous attendiez et ce qui s’est passé. J
 - l’état des étapes de la Mise en route (une capture de la rubrique suffit) ;
 - l’export du journal, de préférence filtré avec « Problèmes seulement » autour du moment du problème ;
 - en cas d’échec au démarrage, la fin de `data/run/logs/backend.err.log` ou de `data/run/logs/perception.err.log` ;
-- pour une lenteur, le tableau de `npm run mesures`.
+- pour une lenteur, le tableau de `pnpm mesures`.
 
 Avant d’envoyer quoi que ce soit, relisez-le. Le journal masque les clés et les mots de passe, mais il peut contenir des prénoms, des noms de sources, des adresses de votre réseau (Home Assistant, commandes) ou des traces techniques de votre ordinateur. Remplacez-les par des valeurs neutres. N’envoyez jamais le fichier `.env`, le dossier `data/` ni une capture de la caméra.
 

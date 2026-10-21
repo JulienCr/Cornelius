@@ -99,7 +99,7 @@ check_prerequisites() {
   elif ! node -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit(a>24||(a===24&&b>=2)?0:1)'; then
     problems+=("Node.js $(node --version) détecté : Cornelius demande Node.js 24.2 ou plus récent (node:sqlite, --env-file-if-exists). Voir .nvmrc.")
   fi
-  [ -f "$ROOT/.env" ] || problems+=("Fichier .env absent : lancez « npm run setup » à la racine du projet.")
+  [ -f "$ROOT/.env" ] || problems+=("Fichier .env absent : lancez « pnpm run setup » à la racine du projet.")
   if [ "${#problems[@]}" -gt 0 ]; then
     printf 'Attention : %s\n' "${problems[@]}" >&2
     echo "Cornelius ne peut pas démarrer : corrigez les points ci-dessus puis relancez." >&2
@@ -107,25 +107,42 @@ check_prerequisites() {
   fi
 }
 
-# Dépendances npm complètes et à jour : outils présents, et package-lock.json inchangé depuis la
-# dernière installation réussie (npm écrit node_modules/.package-lock.json en dernier).
+# Dépendances Node complètes et à jour : outils présents, et pnpm-lock.yaml inchangé depuis la
+# dernière installation réussie (pnpm réécrit node_modules/.modules.yaml à la fin de chaque install).
 dependencies_ready() {
   local file
-  for file in .package-lock.json tsx/package.json typescript/package.json vite/package.json .bin/tsc; do
+  for file in .modules.yaml tsx/package.json typescript/package.json vite/package.json .bin/tsc; do
     [ -e "$ROOT/node_modules/$file" ] || return 1
   done
-  [ ! -f "$ROOT/package-lock.json" ] ||
-    [ "$(stat -c %Y "$ROOT/package-lock.json")" -le "$(($(stat -c %Y "$ROOT/node_modules/.package-lock.json") + 10))" ]
+  [ ! -f "$ROOT/pnpm-lock.yaml" ] ||
+    [ "$(stat -c %Y "$ROOT/pnpm-lock.yaml")" -le "$(($(stat -c %Y "$ROOT/node_modules/.modules.yaml") + 10))" ]
 }
 
-# Installe les dépendances exactes (npm ci) si elles manquent, sont incomplètes ou ont changé.
+# Rend pnpm disponible : celui du PATH, sinon celui de Corepack (livré avec Node.js 24).
+ensure_pnpm() {
+  command -v pnpm >/dev/null 2>&1 && return 0
+  export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+  if command -v corepack >/dev/null 2>&1; then
+    corepack enable >/dev/null 2>&1 || {
+      mkdir -p "$HOME/.local/bin" && corepack enable --install-directory "$HOME/.local/bin" &&
+        export PATH="$HOME/.local/bin:$PATH"
+    } || true
+  fi
+  command -v pnpm >/dev/null 2>&1 || {
+    echo "pnpm est introuvable : lancez « corepack enable » (livré avec Node.js 24), ou installez pnpm 10." >&2
+    exit 1
+  }
+}
+
+# Installe les dépendances exactes (pnpm install --frozen-lockfile) si elles manquent, sont
+# incomplètes ou ont changé.
 sync_dependencies() {
   dependencies_ready && return 0
-  command -v npm >/dev/null 2>&1 || { echo "npm est introuvable dans le PATH." >&2; exit 1; }
-  echo "Dépendances absentes, incomplètes ou à mettre à jour : installation (npm ci)…"
+  ensure_pnpm
+  echo "Dépendances absentes, incomplètes ou à mettre à jour : installation (pnpm install)…"
   "$ROOT/scripts/stop.sh"
-  if ! (cd "$ROOT" && npm ci) || ! dependencies_ready; then
-    echo "L’installation des dépendances a échoué (npm ci) : supprimez node_modules, puis relancez." >&2
+  if ! (cd "$ROOT" && pnpm install --frozen-lockfile) || ! dependencies_ready; then
+    echo "L’installation des dépendances a échoué (pnpm install) : supprimez node_modules, puis relancez." >&2
     exit 1
   fi
 }
@@ -141,7 +158,7 @@ show_log_tail() {
   done
 }
 
-# Serveur (Fastify) sur le port donné, sauf s’il écoute déjà. Node directement, sans npm : le PID
+# Serveur (Fastify) sur le port donné, sauf s’il écoute déjà. Node directement, sans pnpm : le PID
 # suivi est celui du serveur. SERVER_PID reste vide si le serveur tournait déjà.
 launch_server() {
   local owner

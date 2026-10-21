@@ -96,9 +96,10 @@ NODE_BIN="$(node -p 'process.execPath')"
 echo "Node $(node --version) : $NODE_BIN"
 
 step "Dépendances Node et configuration"
-npm ci
-npm run setup
-if [ "$build" = 1 ]; then npm run build; fi
+ensure_pnpm
+pnpm install --frozen-lockfile
+pnpm run setup
+if [ "$build" = 1 ]; then pnpm run build; fi
 
 # --- Python 3.12 pour la perception -------------------------------------------------------
 step "Python 3.12 (perception)"

@@ -6,6 +6,12 @@ Le fonctionnement actuel est décrit dans la [documentation](docs/README.md). Ce
 
 ## Non publié
 
+### 2026-10-21 : passage à pnpm
+
+**Modifié**
+
+- Le projet s’installe et se lance avec pnpm 10 (`pnpm-lock.yaml`, activé par Corepack) au lieu de npm : `pnpm install --frozen-lockfile`, `pnpm test`, `pnpm build`. Les scripts de démarrage et d’installation, la vérification automatique et la documentation suivent.
+
 ### 2026-10-20 : contrat des modules 0.2.0
 
 Cornelius passe en 0.2.0. Ces ajouts restent compatibles `apiVersion: 1` ; un module qui s’en sert déclare `minCoreVersion: '0.2.0'`.

@@ -3,9 +3,9 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { npmNotices } from '../scripts/notices.js';
 
-test('THIRD_PARTY_NOTICES.md liste toutes les bibliothèques npm (npm run notices)', () => {
+test('THIRD_PARTY_NOTICES.md liste toutes les bibliothèques npm (pnpm notices)', () => {
   const text = readFileSync(new URL('../THIRD_PARTY_NOTICES.md', import.meta.url), 'utf8');
-  assert.ok(text.includes(npmNotices()), 'Liste périmée : lancez npm run notices.');
+  assert.ok(text.includes(npmNotices()), 'Liste périmée : lancez pnpm notices.');
 });
 
 test('la licence du projet est déclarée partout de la même façon', () => {

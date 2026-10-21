@@ -6,6 +6,7 @@ Cette page explique comment installer Cornelius sur un ordinateur Windows 10 ou 
 
 - Windows 10 ou 11, en 64 bits.
 - [Node.js](https://nodejs.org/) 24, version 24.2 ou plus récente dans la version 24 (celle du fichier `.nvmrc`). Si le site propose une version plus récente, choisissez la 24. Vérifiez avec `node --version`.
+- pnpm 10, activé avec Corepack, fourni avec Node.js 24 : dans un PowerShell lancé en administrateur, tapez `corepack enable`, puis rouvrez PowerShell. Vérifiez avec `pnpm --version`.
 - [Python](https://www.python.org/downloads/windows/) 3.12, installé depuis python.org avec le lanceur `py` (proposé par l’installateur). Dans la liste, prenez une version 3.12 qui propose un « Windows installer (64-bit) ». Vérifiez avec `py -3.12 --version`. C’est la version validée pour Cornelius, et la seule pour laquelle AMD publie PyTorch sous Windows.
 - [Git pour Windows](https://git-scm.com/download/win).
 - Une webcam, un micro, des haut-parleurs et un navigateur récent (Google Chrome ou Microsoft Edge).
@@ -19,20 +20,20 @@ Ouvrez PowerShell après avoir installé ces logiciels, pour qu’il les trouve.
 ```powershell
 git clone https://github.com/lfpoulain/Cornelius.git
 cd Cornelius
-npm ci
-npm run setup
+pnpm install --frozen-lockfile
+pnpm run setup
 notepad .env
 ```
 
-- `npm ci` installe les dépendances exactes du projet.
-- `npm run setup` crée le fichier `.env` : le port (`PORT=3000`), la base de données, le mot de passe de l’administration (`cornelius` au départ), un jeton privé pour la perception et une ligne `OPENAI_API_KEY=` vide. Sur un `.env` existant, il ne change rien et complète seulement les lignes manquantes.
+- `pnpm install --frozen-lockfile` installe les dépendances exactes du projet.
+- `pnpm run setup` crée le fichier `.env` : le port (`PORT=3000`), la base de données, le mot de passe de l’administration (`cornelius` au départ), un jeton privé pour la perception et une ligne `OPENAI_API_KEY=` vide. Sur un `.env` existant, il ne change rien et complète seulement les lignes manquantes.
 - Dans le Bloc-notes, choisissez un autre mot de passe dans `CORNELIUS_ADMIN_PASSWORD` (4 caractères au moins), puis enregistrez. La clé OpenAI peut se coller ici après `OPENAI_API_KEY=`, ou plus tard dans l’administration (**Mise en route → Clés et jetons**), sans redémarrage.
 
 Les autres réglages possibles de `.env` (jetons des modules, caméra, vision, images) sont décrits dans [Configuration](../reference/configuration.md) et commentés dans `.env.example`.
 
 Toutes les commandes de cette page se lancent depuis le dossier `Cornelius`.
 
-Si `npm ci` répond « Impossible de charger le fichier …\npm.ps1, car l’exécution de scripts est désactivée sur ce système », voir [Pourquoi `-ExecutionPolicy Bypass`](#pourquoi--executionpolicy-bypass) plus bas.
+Si `pnpm install --frozen-lockfile` répond « Impossible de charger le fichier …\pnpm.ps1, car l’exécution de scripts est désactivée sur ce système », voir [Pourquoi `-ExecutionPolicy Bypass`](#pourquoi--executionpolicy-bypass) plus bas.
 
 ## Préparer la perception
 
@@ -105,7 +106,7 @@ Cornelius ne démarre pas tout seul avec Windows : relancez `start.ps1` après u
 
 Par défaut, Windows interdit d’exécuter des scripts PowerShell (fichiers `.ps1`). `-ExecutionPolicy Bypass` lève cette interdiction pour ce seul lancement, sans modifier le réglage de Windows. Les scripts fonctionnent avec Windows PowerShell 5.1, fourni avec Windows, comme avec PowerShell 7.
 
-La même règle peut bloquer `npm` lui-même, avec un message du type « Impossible de charger le fichier …\npm.ps1, car l’exécution de scripts est désactivée sur ce système ». Tapez alors `npm.cmd` à la place de `npm` (par exemple `npm.cmd ci`), ou autorisez les scripts locaux pour votre seul compte :
+La même règle peut bloquer `pnpm` lui-même, avec un message du type « Impossible de charger le fichier …\pnpm.ps1, car l’exécution de scripts est désactivée sur ce système ». Tapez alors `pnpm.cmd` à la place de `pnpm` (par exemple `pnpm.cmd install --frozen-lockfile`), ou autorisez les scripts locaux pour votre seul compte :
 
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
@@ -134,13 +135,13 @@ Les problèmes s’affichent en jaune, précédés de « AVERTISSEMENT : » (« 
 |---|---|---|
 | Node.js est introuvable dans le PATH | Node.js n’est pas installé, ou PowerShell a été ouvert avant son installation. | Installez Node.js 24, puis rouvrez PowerShell. |
 | Node.js … détecté : Cornelius demande Node.js 24.2 ou plus récent | La version de Node.js est trop ancienne. | Installez Node.js 24.2 ou une version 24 plus récente. |
-| Dépendances absentes, incomplètes ou à mettre à jour : installation (npm ci) | `node_modules` manque, est incomplet (un `npm ci` interrompu ou gêné par un fichier ouvert) ou date d’avant un `git pull`. | Rien : le script arrête Cornelius et réinstalle tout seul. |
-| L’installation des dépendances a échoué (npm ci, code …) | `npm ci` n’a pas pu terminer, souvent parce qu’un fichier de `node_modules` est ouvert ailleurs. | Fermez l’éditeur et les autres terminaux ouverts sur le projet, supprimez le dossier `node_modules`, puis relancez `start.ps1`. |
-| Fichier .env absent : lancez « npm run setup » | La configuration n’a pas été créée. | Lancez `npm run setup`, puis renseignez la clé OpenAI. |
+| Dépendances absentes, incomplètes ou à mettre à jour : installation (pnpm install) | `node_modules` manque, est incomplet (un `pnpm install --frozen-lockfile` interrompu ou gêné par un fichier ouvert) ou date d’avant un `git pull`. | Rien : le script arrête Cornelius et réinstalle tout seul. |
+| L’installation des dépendances a échoué (pnpm install, code …) | `pnpm install --frozen-lockfile` n’a pas pu terminer, souvent parce qu’un fichier de `node_modules` est ouvert ailleurs. | Fermez l’éditeur et les autres terminaux ouverts sur le projet, supprimez le dossier `node_modules`, puis relancez `start.ps1`. |
+| Fichier .env absent : lancez « pnpm run setup » | La configuration n’a pas été créée. | Lancez `pnpm run setup`, puis renseignez la clé OpenAI. |
 | Cornelius ne peut pas démarrer : corrigez les points ci-dessus puis relancez. | Résumé des messages précédents. | Corrigez chaque point listé au-dessus. |
-| npm est introuvable dans le PATH. | L’interface doit être compilée, mais npm manque. | Réinstallez Node.js (npm est fourni avec). |
-| La compilation a échoué (code …). | La compilation de l’interface a rencontré une erreur. | Relancez `npm ci`, puis `start.ps1 -Build`. Le détail est affiché juste au-dessus. |
-| « 'tsc' n’est pas reconnu… » ou « Cannot find package …\node_modules\tsx\index.js » | `node_modules` est incomplet (version antérieure des scripts). | Lancez `stop.ps1`, supprimez le dossier `node_modules`, puis `npm ci` et `start.ps1`. |
+| pnpm est introuvable | Les dépendances ou l’interface sont à installer, mais pnpm manque et Corepack n’a pas pu l’activer. | Dans un PowerShell lancé en administrateur, tapez `corepack enable`, ou installez pnpm 10, puis rouvrez PowerShell. |
+| La compilation a échoué (code …). | La compilation de l’interface a rencontré une erreur. | Relancez `pnpm install --frozen-lockfile`, puis `start.ps1 -Build`. Le détail est affiché juste au-dessus. |
+| « 'tsc' n’est pas reconnu… » ou « Cannot find package …\node_modules\tsx\index.js » | `node_modules` est incomplet (version antérieure des scripts). | Lancez `stop.ps1`, supprimez le dossier `node_modules`, puis `pnpm install --frozen-lockfile` et `start.ps1`. |
 | Python de perception introuvable | Le dossier `.venv` n’existe pas. Le serveur démarre quand même, sans caméra ni voix. | Suivez « Préparer la perception » ci-dessus. |
 | Perception déjà active | Une perception tourne déjà. | Rien à faire. |
 | Le backend s’est arrêté au démarrage (code …) | Le serveur s’est arrêté aussitôt. La fin de son journal est affichée en dessous. | Lisez le journal : un mot de passe trop court dans `.env` (« Définissez CORNELIUS_ADMIN_PASSWORD (4 caractères minimum) »), un `PORT` invalide ou un port déjà occupé (« EADDRINUSE »). |
@@ -153,12 +154,12 @@ Le script ne vérifie pas que la perception reste lancée. Si elle s’arrête, 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\stop.ps1
 git pull
-npm ci
+pnpm install --frozen-lockfile
 .venv\Scripts\python -m pip install -r perception\requirements.txt
 powershell -ExecutionPolicy Bypass -File scripts\start.ps1
 ```
 
-`npm ci` est facultatif ici : `start.ps1` réinstalle les dépendances quand `package-lock.json` a changé, puis recompile l’interface quand le code a changé. Au démarrage, le serveur met la base de données à jour si besoin, après en avoir fait une copie de sécurité.
+`pnpm install --frozen-lockfile` est facultatif ici : `start.ps1` réinstalle les dépendances quand `pnpm-lock.yaml` a changé, puis recompile l’interface quand le code a changé. Au démarrage, le serveur met la base de données à jour si besoin, après en avoir fait une copie de sécurité.
 
 Si vous utilisez un moteur ONNX pour GPU, la commande `pip install -r perception\requirements.txt` réinstalle le moteur pour processeur à côté : refaites ensuite l’installation du moteur GPU comme indiqué dans [GPU](gpu.md#changer-de-moteur-onnx).
 

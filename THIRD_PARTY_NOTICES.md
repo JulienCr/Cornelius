@@ -22,7 +22,7 @@ Ces fichiers de tiers sont copiés dans le dépôt. Leur notice doit rester à c
 
 ## Principales bibliothèques
 
-L’interface compilée (`dist/web`) contient notamment React et React DOM (MIT, Meta Platforms, Inc. et ses affiliés), Three.js (MIT, three.js authors), Radix UI (MIT, WorkOS), Lucide (ISC, Lucide Contributors), Tailwind CSS et tailwind-merge (MIT), clsx (MIT, Luke Edwards) et class-variance-authority (Apache 2.0, Joe Bell). Le serveur repose sur Fastify (MIT, The Fastify Team), la bibliothèque OpenAI pour Node.js (Apache 2.0, OpenAI), ws (MIT), Ajv (MIT) et selfsigned (MIT). Les textes complets de leurs licences sont dans `node_modules/<paquet>/` après `npm ci`.
+L’interface compilée (`dist/web`) contient notamment React et React DOM (MIT, Meta Platforms, Inc. et ses affiliés), Three.js (MIT, three.js authors), Radix UI (MIT, WorkOS), Lucide (ISC, Lucide Contributors), Tailwind CSS et tailwind-merge (MIT), clsx (MIT, Luke Edwards) et class-variance-authority (Apache 2.0, Joe Bell). Le serveur repose sur Fastify (MIT, The Fastify Team), la bibliothèque OpenAI pour Node.js (Apache 2.0, OpenAI), ws (MIT), Ajv (MIT) et selfsigned (MIT). Les textes complets de leurs licences sont dans `node_modules/<paquet>/` après `pnpm install --frozen-lockfile`.
 
 La perception et la génération d’images utilisent ONNX Runtime (MIT, Microsoft), OpenCV (Apache 2.0), NumPy, SciPy et scikit-learn (BSD 3-Clause), Pillow (licence HPND/MIT-CMU), PyTorch (BSD 3-Clause), Diffusers, Transformers, Accelerate, Tokenizers, safetensors et huggingface_hub (Apache 2.0, Hugging Face), et openWakeWord (Apache 2.0, David Scripka). Leurs versions sont fixées dans `perception/requirements*.txt` et `image_generation/requirements.txt` ; leurs licences sont installées avec elles dans `.venv` et `.venv-image`.
 
@@ -50,15 +50,12 @@ Cornelius se connecte, si vous les configurez, à OpenAI (conversation et mémoi
 
 ## Toutes les bibliothèques npm
 
-Liste générée depuis `package-lock.json` par `npm run notices`. « exécution » : utilisée par Cornelius en fonctionnement ; « outil » : compilation, tests ou lancement en TypeScript.
+Liste générée depuis `pnpm-lock.yaml` par `pnpm notices`. « exécution » : utilisée par Cornelius en fonctionnement ; « outil » : compilation, tests ou lancement en TypeScript.
 
 <!-- npm:début -->
 | Paquet | Version | Licence | Rôle |
 | --- | --- | --- | --- |
 | @dimforge/rapier3d-compat | 0.12.0 | Apache-2.0 | outil |
-| @emnapi/core | 1.11.1 | MIT | outil |
-| @emnapi/runtime | 1.11.1 | MIT | outil |
-| @emnapi/wasi-threads | 1.2.2 | MIT | outil |
 | @esbuild/aix-ppc64 | 0.28.2 | MIT | outil |
 | @esbuild/android-arm64 | 0.28.2 | MIT | outil |
 | @esbuild/android-arm | 0.28.2 | MIT | outil |
@@ -108,7 +105,6 @@ Liste générée depuis `package-lock.json` par `npm run notices`. « exécution
 | @jridgewell/trace-mapping | 0.3.31 | MIT | outil |
 | @leichtgewicht/ip-codec | 2.0.5 | MIT | exécution |
 | @lukeed/ms | 2.0.2 | MIT | exécution |
-| @napi-rs/wasm-runtime | 1.1.4 | MIT | outil |
 | @noble/hashes | 1.8.0 | MIT | exécution |
 | @oxc-project/types | 0.149.0 | MIT | outil |
 | @peculiar/asn1-cms | 2.10.0 | MIT | exécution |
@@ -217,7 +213,6 @@ Liste générée depuis `package-lock.json` par `npm run notices`. « exécution
 | @tailwindcss/oxide | 4.3.3 | MIT | outil |
 | @tailwindcss/vite | 4.3.3 | MIT | outil |
 | @tweenjs/tween.js | 23.1.3 | MIT | outil |
-| @tybys/wasm-util | 0.10.2 | MIT | outil |
 | @types/node | 24.13.5 | MIT | outil |
 | @types/react-dom | 19.3.0 | MIT | exécution |
 | @types/react | 19.3.0 | MIT | exécution |
@@ -389,7 +384,7 @@ Liste générée depuis `package-lock.json` par `npm run notices`. « exécution
 | toad-cache | 3.7.4 | MIT | exécution |
 | toidentifier | 1.0.1 | MIT | exécution |
 | tslib | 1.14.1 | 0BSD | exécution |
-| tslib | 2.8.1 | 0BSD | outil |
+| tslib | 2.8.1 | 0BSD | exécution |
 | tsx | 4.23.13 | MIT | outil |
 | tsyringe | 4.10.0 | MIT | exécution |
 | typescript | 7.0.2 | Apache-2.0 | outil |
@@ -400,4 +395,5 @@ Liste générée depuis `package-lock.json` par `npm run notices`. « exécution
 | vite | 8.3.0 | MIT | outil |
 | wrappy | 1.0.2 | ISC | exécution |
 | ws | 8.21.3 | MIT | exécution |
+| yaml | 2.9.1 | ISC | outil |
 <!-- npm:fin -->

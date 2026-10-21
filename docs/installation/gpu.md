@@ -169,7 +169,7 @@ La Radeon 890M n’a pas de mémoire propre : elle partage les 32 Go avec le sys
 - Commencez sans GPU : la vision 450M sur le processeur suffit pour décrire une scène.
 - Quand Cornelius regarde à la demande, il attend la description 10 secondes au plus. Les versions 1,6B et 3B peuvent dépasser ce délai sur le processeur : choisissez-les seulement avec un GPU.
 - Si la vision et les images partagent la même carte, gardez la vision en 450M ou sur le processeur, et activez **Charger le modèle dès le démarrage** dans **Modules → Génération d’image** : la première image ne paie plus le chargement, mais la mémoire reste occupée en permanence.
-- La compatibilité ne dit rien de la vitesse. Mesurez sur votre machine : `npm run mesures` donne la durée médiane des analyses de la vision, et **État du système → Génération d’image** la dernière génération. Sur AMD, vérifiez aussi la mémoire réellement disponible pour la carte.
+- La compatibilité ne dit rien de la vitesse. Mesurez sur votre machine : `pnpm mesures` donne la durée médiane des analyses de la vision, et **État du système → Génération d’image** la dernière génération. Sur AMD, vérifiez aussi la mémoire réellement disponible pour la carte.
 
 ## Voir aussi
 

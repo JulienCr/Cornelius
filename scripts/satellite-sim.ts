@@ -4,7 +4,7 @@
  * messages du serveur et enregistre la voix de Cornelius. Voir
  * docs/developpement/satellites-protocole.md.
  *
- *   npx tsx scripts/satellite-sim.ts --token <jeton> [--wav cornelius.wav] [--after 2]
+ *   pnpm exec tsx scripts/satellite-sim.ts --token <jeton> [--wav cornelius.wav] [--after 2]
  *     [--url ws://127.0.0.1:3000/satellite] [--fingerprint AA:BB:…] [--timeout 60]
  *     [--out data/satellite-sim.wav] [--wake-only]
  *

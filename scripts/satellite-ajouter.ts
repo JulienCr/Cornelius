@@ -2,7 +2,7 @@
  * Crée l’accès d’un satellite audio configuré à la main (développement) et affiche son jeton,
  * montré une seule fois. Un satellite ordinaire s’associe dans Administration → Satellites audio.
  *
- *   npx tsx --env-file-if-exists=.env scripts/satellite-ajouter.ts "Bureau"
+ *   pnpm exec tsx --env-file-if-exists=.env scripts/satellite-ajouter.ts "Bureau"
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

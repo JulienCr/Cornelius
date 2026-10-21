@@ -8,17 +8,17 @@ Cornelius assemble trois environnements, chacun dans son dossier :
 
 | Partie | Outil | Où | Créé par |
 |---|---|---|---|
-| Serveur et interface | Node.js 24, version exacte dans `.nvmrc` (24.2 ou plus récent, moins de 25) | `node_modules/` | `npm ci` |
+| Serveur et interface | Node.js 24, version exacte dans `.nvmrc` (24.2 ou plus récent, moins de 25) | `node_modules/` | `pnpm install --frozen-lockfile` |
 | Perception (caméra, visages, voix, vision) | Python 3.12 | `.venv/` | `scripts/install-linux.sh`, ou à la main (voir ci-dessous) |
 | Génération d’images (facultative) | Python, PyTorch et Diffusers | `.venv-image/` | l’administration, **Modules → Génération d’image → Installer** (`image_generation/install.py`) |
 
-Les dépendances Node sont verrouillées dans `package-lock.json`, celles de Python dans `perception/requirements*.txt` et `image_generation/requirements.txt`. Les modèles téléchargés vont dans `models/`, la base et les journaux dans `data/`. Ces dossiers, `.env`, `.venv/` et `.venv-image/` restent hors du dépôt (voir `.gitignore`), sauf `models/cornelius.onnx` et sa licence, fournis avec le code.
+Les dépendances Node sont verrouillées dans `pnpm-lock.yaml`, celles de Python dans `perception/requirements*.txt` et `image_generation/requirements.txt`. Les modèles téléchargés vont dans `models/`, la base et les journaux dans `data/`. Ces dossiers, `.env`, `.venv/` et `.venv-image/` restent hors du dépôt (voir `.gitignore`), sauf `models/cornelius.onnx` et sa licence, fournis avec le code.
 
 Préparer le dépôt sous Linux :
 
 ```sh
-npm ci
-npm run setup
+pnpm install --frozen-lockfile
+pnpm run setup
 python3.12 -m venv .venv
 .venv/bin/python -m pip install -r perception/requirements.txt
 .venv/bin/python perception/download_models.py
@@ -27,14 +27,14 @@ python3.12 -m venv .venv
 Sous Windows :
 
 ```powershell
-npm ci
-npm run setup
+pnpm install --frozen-lockfile
+pnpm run setup
 py -3.12 -m venv .venv
 .venv\Scripts\python.exe -m pip install -r perception\requirements.txt
 .venv\Scripts\python.exe perception\download_models.py
 ```
 
-`npm run setup` crée `.env` (port, base, mot de passe administrateur par défaut, jeton de la perception, clé OpenAI vide) ou complète un fichier existant. Ajoutez ensuite `OPENAI_API_KEY` et, si besoin, les autres variables décrites dans [la configuration](../reference/configuration.md). `.venv/bin/python perception/worker.py --check` vérifie la caméra et les modèles sans serveur ni cloud.
+`pnpm run setup` crée `.env` (port, base, mot de passe administrateur par défaut, jeton de la perception, clé OpenAI vide) ou complète un fichier existant. Ajoutez ensuite `OPENAI_API_KEY` et, si besoin, les autres variables décrites dans [la configuration](../reference/configuration.md). `.venv/bin/python perception/worker.py --check` vérifie la caméra et les modèles sans serveur ni cloud.
 
 ## Lancer en développement
 
@@ -55,30 +55,30 @@ Options : `--no-frontend`, `--no-perception` et `--timeout SECONDES` sous Linux 
 Sans les scripts, lancez le serveur puis Vite dans deux terminaux, et la perception à part si vous en avez besoin :
 
 ```sh
-npm start
-npm run dev:web
+pnpm start
+pnpm dev:web
 .venv/bin/python perception/worker.py
 ```
 
-Le mot d’appel passe par `/wake-audio`, que Vite ne relaie pas : pour l’essayer, ouvrez le miroir sur le port du serveur après `npm run build`.
+Le mot d’appel passe par `/wake-audio`, que Vite ne relaie pas : pour l’essayer, ouvrez le miroir sur le port du serveur après `pnpm build`.
 
 ## Scripts
 
-Scripts npm (`package.json`) :
+Scripts `package.json` (lancés avec pnpm) :
 
 | Commande | Effet |
 |---|---|
-| `npm start` | Lance le serveur (`server/index.ts`) avec `.env`, sur `127.0.0.1` et le `PORT` choisi. Sert l’interface compilée si `dist/web` existe. |
-| `npm run dev:web` | Lance Vite sur `127.0.0.1:5173`. |
-| `npm run build` | Vérifie les types (`tsc --noEmit`) puis compile l’interface dans `dist/web`. |
-| `npm run check` | Vérifie les types seulement. |
-| `npm test` | Tests TypeScript (`tests/*.test.ts` et `addons/*/*.test.ts`). |
-| `npm run test:e2e` | Tests navigateur Playwright (`tests/e2e`). |
-| `npm run format` | Formate le code avec Prettier. |
-| `npm run format:check` | Vérifie le formatage sans rien modifier (lancé par la vérification automatique). |
-| `npm run setup` | Crée ou complète `.env`. |
-| `npm run recette` | Guide la recette manuelle sur le matériel. |
-| `npm run mesures` | Résume les mesures enregistrées dans le journal. |
+| `pnpm start` | Lance le serveur (`server/index.ts`) avec `.env`, sur `127.0.0.1` et le `PORT` choisi. Sert l’interface compilée si `dist/web` existe. |
+| `pnpm dev:web` | Lance Vite sur `127.0.0.1:5173`. |
+| `pnpm build` | Vérifie les types (`tsc --noEmit`) puis compile l’interface dans `dist/web`. |
+| `pnpm check` | Vérifie les types seulement. |
+| `pnpm test` | Tests TypeScript (`tests/*.test.ts` et `addons/*/*.test.ts`). |
+| `pnpm test:e2e` | Tests navigateur Playwright (`tests/e2e`). |
+| `pnpm format` | Formate le code avec Prettier. |
+| `pnpm format:check` | Vérifie le formatage sans rien modifier (lancé par la vérification automatique). |
+| `pnpm run setup` | Crée ou complète `.env`. |
+| `pnpm recette` | Guide la recette manuelle sur le matériel. |
+| `pnpm mesures` | Résume les mesures enregistrées dans le journal. |
 
 Scripts du dossier `scripts/` :
 
@@ -93,7 +93,7 @@ Scripts du dossier `scripts/` :
 
 Les scripts Linux écrivent leurs fichiers de suivi et leurs journaux dans `data/run/` et `data/run/logs/`. `scripts/setup.ts`, `scripts/recette.ts`, `scripts/recette-lib.ts`, `scripts/mesures.ts` et `scripts/wait-server.mjs` (attente du serveur) servent les commandes npm et les scripts de lancement.
 
-Les satellites audio (en développement) ont trois outils, lancés avec `npx tsx` : `scripts/satellite-ajouter.ts` crée un satellite et affiche son jeton, `scripts/satellite-sim.ts` simule un satellite sans matériel, `scripts/satellite-sonde.ts` vérifie une session Live en PCM 16 kHz. Le dialogue avec le firmware est décrit dans [le protocole des satellites](satellites-protocole.md).
+Les satellites audio (en développement) ont trois outils, lancés avec `pnpm exec tsx` : `scripts/satellite-ajouter.ts` crée un satellite et affiche son jeton, `scripts/satellite-sim.ts` simule un satellite sans matériel, `scripts/satellite-sonde.ts` vérifie une session Live en PCM 16 kHz. Le dialogue avec le firmware est décrit dans [le protocole des satellites](satellites-protocole.md).
 
 ## Organisation du dépôt
 
@@ -150,8 +150,8 @@ L’administration (`web/components/Admin.tsx`) range ses rubriques dans l’adr
 
 ## Conventions
 
-- **TypeScript strict** (`tsconfig.json` : `strict`, `noUncheckedIndexedAccess`, `noUnusedLocals`, `noUnusedParameters`). `npm run check` doit passer.
-- **Formatage** : `npm run format` avant de valider ; la vérification automatique lance `npm run format:check`. Prettier ne touche ni `docs/` ni `schemas/` (`.prettierignore`).
+- **TypeScript strict** (`tsconfig.json` : `strict`, `noUncheckedIndexedAccess`, `noUnusedLocals`, `noUnusedParameters`). `pnpm check` doit passer.
+- **Formatage** : `pnpm format` avant de valider ; la vérification automatique lance `pnpm format:check`. Prettier ne touche ni `docs/` ni `schemas/` (`.prettierignore`).
 - **Textes en français**, pour l’interface, les messages d’erreur, les journaux lisibles et la documentation. Phrases courtes, sans tiret long. Le miroir est visible de tous : les raisons qu’il affiche quand il ne répond pas ne citent jamais de prénom (`shared/readiness.ts`).
 - **Noms des outils vocaux** : `<module>__<outil>`, avec deux tirets bas (par exemple `weather__read`, `vision__look`, `memory__recall`). L’identifiant d’un module respecte `^[a-z][a-z0-9_]{0,31}$`. Voir [la référence des modules](../modules/reference.md).
 - **Migrations SQLite** : la liste `migrations` de `server/storage.ts` est définitive. Une migration publiée n’est jamais modifiée ; la suivante s’ajoute à la fin. Écrivez-la rejouable (`CREATE TABLE IF NOT EXISTS`, `INSERT OR IGNORE`) et donnez des valeurs par défaut qui gardent le comportement existant. Le serveur copie la base avant de migrer (`server/backups.ts`).
@@ -162,7 +162,7 @@ L’administration (`web/components/Admin.tsx`) range ses rubriques dans l’adr
 
 `.github/workflows/check.yml` tourne à chaque envoi et à chaque demande de fusion, en deux parties :
 
-- **check** : `npm ci`, `npm run format:check`, `npm test`, `npm run build`, installation de Chromium, `npm run test:e2e` ;
+- **check** : `pnpm install --frozen-lockfile`, `pnpm format:check`, `pnpm test`, `pnpm build`, installation de Chromium, `pnpm test:e2e` ;
 - **perception** : Python 3.12, `pip install -r perception/requirements.txt`, tests de `tests/python`, puis `shellcheck` sur `scripts/*.sh`.
 
 Les mêmes commandes se lancent en local : voir [Tests et recette](tests-et-recette.md).

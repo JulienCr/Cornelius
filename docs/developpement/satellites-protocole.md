@@ -110,13 +110,13 @@ Après une fermeture, le satellite se reconnecte avec un délai croissant (1 s, 
 Créer un satellite et afficher son jeton, dans **Administration → Satellites audio**, ou en ligne de commande :
 
 ```sh
-npx tsx --env-file-if-exists=.env scripts/satellite-ajouter.ts "Bureau"
+pnpm exec tsx --env-file-if-exists=.env scripts/satellite-ajouter.ts "Bureau"
 ```
 
 Puis simuler le satellite avec un enregistrement WAV (PCM mono 16 kHz) qui contient « Cornelius » et une question :
 
 ```sh
-npx tsx scripts/satellite-sim.ts --token <jeton> --wav question.wav
+pnpm exec tsx scripts/satellite-sim.ts --token <jeton> --wav question.wav
 ```
 
 Le simulateur envoie du silence, puis l’enregistrement, au rythme réel, affiche les messages du serveur et enregistre la voix de Cornelius dans `data/satellite-sim.wav`. Avec `--wake-only`, il s’arrête après la détection, sans conversation ni appel à OpenAI.
