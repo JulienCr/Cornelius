@@ -69,7 +69,7 @@ Voici ce que fait réellement le script, dans l’ordre :
 
 1. Avec `--system-deps`, il installe `git`, `ca-certificates`, `curl`, `python3`, `python3-venv`, `iproute2` et `procps` (Debian, Ubuntu), ou `git`, `python`, `uv`, `iproute2` et `procps-ng` (Arch). Il n’installe pas Node.js.
 2. Il cherche Node.js 24.2 ou plus récent, dans la version 24 (fichier `.nvmrc`). Si fnm ou nvm est présent, il installe et active la bonne version. Sinon, il s’arrête avec un message qui propose d’installer fnm : voir « Préparer Node.js 24 » ci-dessus, puis relancez le script.
-3. Il lance `npm ci` (dépendances), `npm run setup` (crée `.env`, voir plus bas) et `npm run build` (compile l’interface, sauf avec `--no-build`).
+3. Il active pnpm avec Corepack si besoin, puis lance `pnpm install --frozen-lockfile` (dépendances), `pnpm run setup` (crée `.env`, voir plus bas) et `pnpm build` (compile l’interface, sauf avec `--no-build`).
 4. Il crée l’environnement Python `.venv` en Python 3.12, la version validée. Ubuntu 24.04 fournit Python 3.12. Sur Debian 12 (Python 3.11), Debian 13 et Arch (versions plus récentes), il passe par [uv](https://docs.astral.sh/uv/), qui télécharge un Python 3.12 autonome sans toucher au Python du système. Un `.venv` existant est gardé ; s’il n’est pas en 3.12, un avertissement vous invite à le supprimer pour le recréer.
 5. Il installe la perception (`perception/requirements.txt`), puis le moteur de la vision choisi par `--gpu`.
 6. Il télécharge les modèles, chacun vérifié par son empreinte SHA-256, avec `perception/download_models.py --device auto`.
@@ -86,7 +86,7 @@ Si le script s’arrête en route, corrigez la cause puis relancez-le avec les m
 
 ## Renseigner la clé OpenAI
 
-`npm run setup` crée le fichier `.env` à la racine du dossier, lisible par vous seul. Il contient le port (`PORT=3000`), la base de données, le mot de passe de l’administration (`cornelius` au départ), un jeton privé pour la perception et une ligne `OPENAI_API_KEY=` vide. Sur un `.env` existant, il ne change rien et complète seulement les lignes manquantes.
+`pnpm run setup` crée le fichier `.env` à la racine du dossier, lisible par vous seul. Il contient le port (`PORT=3000`), la base de données, le mot de passe de l’administration (`cornelius` au départ), un jeton privé pour la perception et une ligne `OPENAI_API_KEY=` vide. Sur un `.env` existant, il ne change rien et complète seulement les lignes manquantes.
 
 Le plus simple : collez la clé dans l’administration, rubrique **Mise en route**, carte **Clés et jetons** ; elle compte tout de suite. Vous pouvez aussi ouvrir `.env` avec un éditeur de texte et coller votre clé après le signe égal :
 
@@ -205,7 +205,7 @@ scripts/install-linux.sh
 scripts/start.sh
 ```
 
-Si la mise à jour ne touche que le code (`git pull` ne liste ni `package-lock.json` ni `perception/requirements.txt`), il suffit de `git pull` puis `scripts/restart.sh` : `start.sh` recompile l’interface quand le code a changé. Avec les services systemd, lancez alors `npm run build` puis `systemctl --user restart cornelius cornelius-perception`.
+Si la mise à jour ne touche que le code (`git pull` ne liste ni `pnpm-lock.yaml` ni `perception/requirements.txt`), il suffit de `git pull` puis `scripts/restart.sh` : `start.sh` recompile l’interface quand le code a changé. Avec les services systemd, lancez alors `pnpm build` puis `systemctl --user restart cornelius cornelius-perception`.
 
 Au démarrage, le serveur met la base de données à jour si besoin, après en avoir fait une copie de sécurité.
 

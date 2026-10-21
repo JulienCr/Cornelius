@@ -437,7 +437,7 @@ def main():
             return
         token = os.getenv("CORNELIUS_PERCEPTION_TOKEN", "")
         if len(token) < 32:
-            raise ValueError("Exécutez npm run setup pour préparer la clé de perception.")
+            raise ValueError("Exécutez pnpm run setup pour préparer la clé de perception.")
         asyncio.run(worker.run("http://127.0.0.1:" + os.getenv("PORT", "3000"), token))
     finally:
         if worker.scene:

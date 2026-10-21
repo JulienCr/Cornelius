@@ -1381,7 +1381,7 @@ export async function createApp(
     app.get('/admin', async (_request, reply) => reply.sendFile('index.html'));
   } else {
     app.get('/', async () => ({
-      message: 'Exécutez npm run build, ou ouvrez le serveur Vite (npm run dev:web).',
+      message: 'Exécutez pnpm build, ou ouvrez le serveur Vite (pnpm dev:web).',
     }));
   }
   const controllerTimer =

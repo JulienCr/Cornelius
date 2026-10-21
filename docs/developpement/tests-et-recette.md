@@ -8,26 +8,26 @@ Les tests n’appellent ni OpenAI ni un service réel : ils utilisent des bases 
 
 | Commande | Ce qu’elle vérifie |
 |---|---|
-| `npm test` | Tests TypeScript du serveur, des règles partagées, de l’audio du navigateur et des modules (`tests/*.test.ts`, `addons/*/*.test.ts`). |
-| `npm run check` | Types TypeScript, sans compiler. |
-| `npm run format:check` | Formatage Prettier. Corrigez avec `npm run format`. |
-| `npm run build` | Types puis compilation de l’interface dans `dist/web`. |
-| `npm run test:e2e` | Parcours dans un vrai navigateur (Chromium) contre un serveur de test. |
+| `pnpm test` | Tests TypeScript du serveur, des règles partagées, de l’audio du navigateur et des modules (`tests/*.test.ts`, `addons/*/*.test.ts`). |
+| `pnpm check` | Types TypeScript, sans compiler. |
+| `pnpm format:check` | Formatage Prettier. Corrigez avec `pnpm format`. |
+| `pnpm build` | Types puis compilation de l’interface dans `dist/web`. |
+| `pnpm test:e2e` | Parcours dans un vrai navigateur (Chromium) contre un serveur de test. |
 
 Lancer toute la vérification TypeScript, dans l’ordre de la vérification automatique :
 
 ```sh
-npm run format:check
-npm test
-npm run build
-npm run test:e2e
+pnpm format:check
+pnpm test
+pnpm build
+pnpm test:e2e
 ```
 
-Un seul fichier de test se lance avec `npx tsx --test`, un seul parcours navigateur avec `npx playwright test` :
+Un seul fichier de test se lance avec `pnpm exec tsx --test`, un seul parcours navigateur avec `pnpm exec playwright test` :
 
 ```sh
-npx tsx --test tests/memory.test.ts
-npx playwright test tests/e2e/memory.spec.ts
+pnpm exec tsx --test tests/memory.test.ts
+pnpm exec playwright test tests/e2e/memory.spec.ts
 ```
 
 ### Tests navigateur
@@ -35,17 +35,17 @@ npx playwright test tests/e2e/memory.spec.ts
 Installez Chromium une fois pour Playwright (sous Linux, `--with-deps` ajoute les bibliothèques du système) :
 
 ```sh
-npx playwright install chromium
+pnpm exec playwright install chromium
 ```
 
-`npm run test:e2e` démarre lui-même un serveur de test (`playwright.config.ts`) avec une base en mémoire et un mot de passe dédié, sur le port 3101. Ce serveur sert l’interface compilée : lancez `npm run build` d’abord. Si le port est déjà pris, choisissez-en un autre :
+`pnpm test:e2e` démarre lui-même un serveur de test (`playwright.config.ts`) avec une base en mémoire et un mot de passe dédié, sur le port 3101. Ce serveur sert l’interface compilée : lancez `pnpm build` d’abord. Si le port est déjà pris, choisissez-en un autre :
 
 ```sh
-CORNELIUS_E2E_PORT=3199 npm run test:e2e
+CORNELIUS_E2E_PORT=3199 pnpm test:e2e
 ```
 
 ```powershell
-$env:CORNELIUS_E2E_PORT = 3199; npm run test:e2e
+$env:CORNELIUS_E2E_PORT = 3199; pnpm test:e2e
 ```
 
 Les résultats et les captures d’écran des parcours vont dans `.local/` (ignoré par git).
@@ -78,7 +78,7 @@ Le générateur du mot d’appel est un projet séparé, avec ses propres tests 
 | `tests/e2e/modules/` | Seul dossier de modules externes des parcours (`CORNELIUS_MODULES_DIR` de `playwright.config.ts`) : le module `formulaire` exerce les listes déroulantes et les listes répétées. Un `cornelius-modules` cloné à côté n’entre pas dans les parcours. |
 | `tests/python/` | Tests `unittest` de `perception/` et `image_generation/`. |
 | `tests/recette/protocol.json` | Protocole de la recette manuelle (questions, interruptions, nombre d’approches et de passages). |
-| `addons/<id>/*.test.ts` | Tests propres à un module livré, lancés par `npm test`. Ceux des modules externes : `npm run test:modules`. Les deux s’écrivent avec `createTestModule` de `#cornelius/testing` ([référence](../modules/reference.md#tester-un-module)). |
+| `addons/<id>/*.test.ts` | Tests propres à un module livré, lancés par `pnpm test`. Ceux des modules externes : `pnpm test:modules`. Les deux s’écrivent avec `createTestModule` de `#cornelius/testing` ([référence](../modules/reference.md#tester-un-module)). |
 
 Tests ciblés par fonction :
 
@@ -98,7 +98,7 @@ Les tests automatiques ne remplacent pas un essai sur le miroir réel : caméra,
 ### Recette guidée
 
 ```sh
-npm run recette
+pnpm recette
 ```
 
 Le script déroule le protocole de `tests/recette/protocol.json` et attend votre validation entre chaque étape : 20 approches, 50 questions, 20 interruptions et 50 passages de tiers. Il ne produit aucun son et ne pilote ni la caméra ni la session : c’est vous qui vous approchez et posez les questions à voix haute, le serveur ouvre et ferme la conversation selon votre présence réelle.
@@ -114,8 +114,8 @@ Le script déroule le protocole de `tests/recette/protocol.json` et attend votre
 Les options passent après `--` :
 
 ```sh
-npm run recette -- --list
-npm run recette -- --questions 5 --interruptions 2 --approaches 3 --passages 3
+pnpm recette --list
+pnpm recette --questions 5 --interruptions 2 --approaches 3 --passages 3
 ```
 
 La compréhension (question entièrement comprise ou non) se compte à la main pendant la recette.
@@ -125,8 +125,8 @@ La compréhension (question entièrement comprise ou non) se compte à la main p
 Le serveur et le miroir enregistrent leurs mesures dans le journal `data/logs/cornelius.log`. Après la recette, ou après quelques conversations réelles :
 
 ```sh
-npm run mesures
-npm run mesures -- chemin/vers/cornelius.log
+pnpm mesures
+pnpm mesures chemin/vers/cornelius.log
 ```
 
 Le rapport donne un tableau des critères de livraison (réactivité, interruption, affichage, présence) et le détail des étapes, avec médiane et 95e centile :

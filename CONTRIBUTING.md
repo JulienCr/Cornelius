@@ -16,19 +16,19 @@ Ne joignez jamais `.env`, le dossier `data/`, une base SQLite, une clé ou un je
 Les mêmes vérifications tournent automatiquement à chaque envoi (`.github/workflows/check.yml`) :
 
 ```sh
-npm run format:check
-npm test
-npm run build
-npm run test:e2e
+pnpm format:check
+pnpm test
+pnpm build
+pnpm test:e2e
 .venv/bin/python -m unittest discover -s tests/python -p "test_*.py" -v
 shellcheck -x scripts/*.sh
 ```
 
-`npm run format` corrige le formatage. La première fois, `npx playwright install chromium` installe le navigateur des tests. Voir [Tests et recette](docs/developpement/tests-et-recette.md) pour les commandes Windows et la recette manuelle. Le générateur du mot d’appel est un projet séparé, [wakeword-generator](https://github.com/lfpoulain/wakeword-generator), qui reçoit ses propres contributions.
+`pnpm format` corrige le formatage. La première fois, `pnpm exec playwright install chromium` installe le navigateur des tests. Voir [Tests et recette](docs/developpement/tests-et-recette.md) pour les commandes Windows et la recette manuelle. Le générateur du mot d’appel est un projet séparé, [wakeword-generator](https://github.com/lfpoulain/wakeword-generator), qui reçoit ses propres contributions.
 
 ## Conventions
 
-- TypeScript strict ; aucun avertissement de `npm run check`.
+- TypeScript strict ; aucun avertissement de `pnpm check`.
 - Textes en français (interface, messages, documentation), phrases courtes, sans tiret long.
 - Outils vocaux nommés `<module>__<outil>`.
 - Migrations SQLite ajoutées à la fin de la liste de `server/storage.ts`, jamais modifiées une fois publiées, et rejouables.
@@ -38,7 +38,7 @@ shellcheck -x scripts/*.sh
 
 ## Licence des contributions
 
-Cornelius est sous [PolyForm Noncommercial License 1.0.0](LICENSE) : partage et modification permis avec citation, usage commercial interdit. En proposant un changement, vous confirmez en être l’auteur ou avoir le droit de le proposer, et vous acceptez qu’il soit distribué sous cette licence. Vous autorisez aussi les auteurs de Cornelius à le distribuer sous d’autres conditions, notamment dans une licence commerciale accordée par écrit. Après un ajout ou une mise à jour de dépendance npm, lancez `npm run notices` pour tenir [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) à jour (un test le vérifie) ; une nouvelle ressource de tiers copiée dans le dépôt (police, image, code) y gagne une ligne avec sa notice.
+Cornelius est sous [PolyForm Noncommercial License 1.0.0](LICENSE) : partage et modification permis avec citation, usage commercial interdit. En proposant un changement, vous confirmez en être l’auteur ou avoir le droit de le proposer, et vous acceptez qu’il soit distribué sous cette licence. Vous autorisez aussi les auteurs de Cornelius à le distribuer sous d’autres conditions, notamment dans une licence commerciale accordée par écrit. Après un ajout ou une mise à jour de dépendance npm, lancez `pnpm notices` pour tenir [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) à jour (un test le vérifie) ; une nouvelle ressource de tiers copiée dans le dépôt (police, image, code) y gagne une ligne avec sa notice.
 
 ## Voir aussi
 

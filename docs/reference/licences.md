@@ -16,7 +16,7 @@ Le code et la documentation écrits pour Cornelius sont distribués sous la **[P
 
 La licence n’oblige pas à publier ses modifications (elle n’est pas « copyleft »). Comme elle exclut l’usage commercial, ce n’est pas une licence « open source » au sens de l’Open Source Initiative : le dire ainsi serait inexact.
 
-Les attributions des projets de tiers sont réunies dans [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md), avec la liste complète des bibliothèques npm (`npm run notices` la met à jour, un test vérifie qu’elle l’est).
+Les attributions des projets de tiers sont réunies dans [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md), avec la liste complète des bibliothèques npm (`pnpm notices` la met à jour, un test vérifie qu’elle l’est).
 
 Le champ `"private": true` de `package.json` empêche seulement une publication sur npm.
 
@@ -32,7 +32,7 @@ La licence choisie pour le code ne s’applique pas aux polices, composants, mod
 
 Gardez ces notices avec les fichiers, dans le dépôt comme dans toute copie distribuée.
 
-Les bibliothèques installées par `npm ci` (Fastify, React, Three.js, Radix, la bibliothèque OpenAI…) et par `pip` (ONNX Runtime, OpenCV, NumPy, PyTorch, Diffusers, Transformers…) ne sont pas dans le dépôt. Elles sont sous des licences permissives (MIT, ISC, BSD, Apache 2.0, BlueOak, 0BSD), compatibles avec la licence non commerciale de Cornelius ; `npm run notices` en tient la liste à jour depuis `package-lock.json`. Leurs notices doivent suivre toute copie distribuée qui les contient, par exemple l’interface compilée `dist/web`. Leurs versions sont fixées dans `package-lock.json`, `perception/requirements*.txt` et `image_generation/requirements.txt`.
+Les bibliothèques installées par `pnpm install --frozen-lockfile` (Fastify, React, Three.js, Radix, la bibliothèque OpenAI…) et par `pip` (ONNX Runtime, OpenCV, NumPy, PyTorch, Diffusers, Transformers…) ne sont pas dans le dépôt. Elles sont sous des licences permissives (MIT, ISC, BSD, Apache 2.0, BlueOak, 0BSD), compatibles avec la licence non commerciale de Cornelius ; `pnpm notices` en tient la liste à jour depuis `pnpm-lock.yaml`. Leurs notices doivent suivre toute copie distribuée qui les contient, par exemple l’interface compilée `dist/web`. Leurs versions sont fixées dans `pnpm-lock.yaml`, `perception/requirements*.txt` et `image_generation/requirements.txt`.
 
 ## Les modèles de la perception
 
@@ -74,7 +74,7 @@ En pratique, le dépôt publie `models/cornelius.onnx` avec `models/cornelius.on
 
 ## Avant de publier le dépôt
 
-1. **Garder `LICENSE` et `THIRD_PARTY_NOTICES.md`** à la racine, et lancer `npm run notices` après tout changement de dépendance.
+1. **Garder `LICENSE` et `THIRD_PARTY_NOTICES.md`** à la racine, et lancer `pnpm notices` après tout changement de dépendance.
 2. **Garder les notices** des polices (`web/assets/fonts/*-OFL.txt`), des composants (`web/components/ui/LICENSE.md`) et du modèle du mot d’appel (`models/cornelius.onnx.LICENSE`). Ajouter une ligne dans `THIRD_PARTY_NOTICES.md` pour toute autre ressource de tiers ajoutée au dépôt.
 3. **Vérifier ce qui part réellement** :
 

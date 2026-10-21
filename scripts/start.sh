@@ -36,11 +36,12 @@ port="$(server_port)"
 # Après une mise à jour (git pull), une source plus récente que la compilation la relance.
 stale() {
   [ ! -f dist/web/index.html ] ||
-    [ -n "$(find web shared package.json package-lock.json vite.config.ts -type f \
+    [ -n "$(find web shared package.json pnpm-lock.yaml vite.config.ts -type f \
       -newer dist/web/index.html -print -quit 2>/dev/null)" ]
 }
 if [ "$build" = 1 ] || stale; then
-  npm run build
+  ensure_pnpm
+  pnpm run build
 fi
 
 # --- Instance précédente, développement compris ---------------------------------------

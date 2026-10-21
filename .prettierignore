@@ -2,6 +2,6 @@ node_modules/
 dist/
 data/
 .local/
-package-lock.json
+pnpm-lock.yaml
 schemas/
 docs/

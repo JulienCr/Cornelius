@@ -116,7 +116,7 @@ La carte **Modules → Vision → Détails techniques** reprend l’état du mod
 Chaque analyse est aussi notée dans le journal des mesures, avec sa durée ou la raison de son échec, jamais la question ni la description. La commande suivante en donne la médiane, le p95 et les causes d’échec les plus fréquentes, séparément pour l’analyse du début et les questions :
 
 ```sh
-npm run mesures
+pnpm mesures
 ```
 
 Pour vérifier la caméra et les modèles sans lancer le serveur, `perception/worker.py --check` contrôle les fichiers ; ajoutez `--with-vision` pour charger vraiment le modèle (plus lent).

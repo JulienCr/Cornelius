@@ -24,7 +24,7 @@ function Test-CorneliusBuildStale {
   $index = Join-Path $Root 'dist\web\index.html'
   if (-not (Test-Path -LiteralPath $index)) { return $true }
   $builtAt = (Get-Item -LiteralPath $index).LastWriteTime
-  $sources = @('web', 'shared', 'package.json', 'package-lock.json', 'vite.config.ts') |
+  $sources = @('web', 'shared', 'package.json', 'pnpm-lock.yaml', 'vite.config.ts') |
     ForEach-Object { Join-Path $Root $_ } |
     Where-Object { Test-Path -LiteralPath $_ }
   $newer = Get-ChildItem -LiteralPath $sources -Recurse -File -ErrorAction SilentlyContinue |
@@ -33,11 +33,11 @@ function Test-CorneliusBuildStale {
   return [bool]$newer
 }
 if ($Build -or (Test-CorneliusBuildStale)) {
-  $npm = Resolve-CorneliusNpm
-  if (-not $npm) { throw 'npm est introuvable dans le PATH.' }
+  $pnpm = Resolve-CorneliusPnpm
+  if (-not $pnpm) { throw 'pnpm est introuvable : lancez corepack enable (livré avec Node.js 24) ou installez pnpm 10.' }
   Push-Location $Root
   try {
-    & $npm run build
+    & $pnpm run build
     if ($LASTEXITCODE -ne 0) { throw "La compilation a échoué (code $LASTEXITCODE)." }
   } finally {
     Pop-Location
