@@ -248,6 +248,7 @@ export class PerceptionBridge {
         if (event.type === 'camera_source_status' && event.source === this.cameraSource()) {
           this.browserCameraSupported = event.source === 'browser';
           this.diagnostic = null;
+          if (this.browserCameraSupported && this.cameraApplied) this.sendCameraEnabled(true);
           this.changed();
         } else if (
           event.type === 'observation' &&
@@ -324,7 +325,7 @@ export class PerceptionBridge {
       }
     });
     this.send({ type: 'camera_source', source: this.cameraSource() });
-    this.send(this.cameraEnabledEvent(cameraEnabled));
+    this.sendCameraEnabled(cameraEnabled);
     socket.on('error', () => socket.close());
     socket.on('close', () => {
       if (this.worker !== socket) return;
@@ -381,8 +382,14 @@ export class PerceptionBridge {
       this.endEnrollment('rejected', ENROLLMENT_MESSAGES.camera);
       this.send({ type: 'vision_cancel' });
     }
-    this.send(this.cameraEnabledEvent(enabled));
+    this.sendCameraEnabled(enabled);
     this.changed();
+  }
+  // A pre-camera_source worker would open its own camera for deviceId "browser": enabling waits
+  // for camera_source_status, disabling is always sent.
+  private sendCameraEnabled(enabled: boolean) {
+    const unconfirmed = this.cameraSource() === 'browser' && !this.browserCameraSupported;
+    this.send(this.cameraEnabledEvent(enabled && !unconfirmed));
   }
   /**
    * Allumage avec la caméra et la résolution enregistrées : la perception ouvre directement la

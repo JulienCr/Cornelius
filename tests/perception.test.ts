@@ -602,3 +602,32 @@ test('mode voix : la caméra s’allume avec la conversation et s’éteint apr�
     .find((event) => event.type === 'camera_enabled');
   assert.equal(first?.enabled, false);
 });
+
+test('browser source: no enabled camera event until the worker confirms the source', (t) => {
+  const f = fixture(t);
+  type CameraEvent = { type: string; enabled?: boolean; deviceId?: string };
+  const events = (worker: Worker) =>
+    worker.sent
+      .filter((value) => typeof value === 'string')
+      .map((value) => JSON.parse(value as string) as CameraEvent)
+      .filter((event) => event.type === 'camera_enabled' || event.type === 'camera_source');
+  const forBrowser = (worker: Worker) =>
+    events(worker).filter((event) => event.enabled && event.deviceId === 'browser');
+  f.bridge.setCameraSource('browser');
+  assert.equal(forBrowser(f.worker).length, 0, 'an older worker would open its own camera');
+  assert.equal(events(f.worker).at(-1)?.enabled, false, 'its server camera is released');
+  f.worker.message({ type: 'camera_source_status', source: 'browser' });
+  assert.equal(forBrowser(f.worker).length, 1);
+  // A reconnecting worker is held back the same way until it answers.
+  const next = new Worker();
+  f.bridge.connect(next as unknown as WebSocket);
+  assert.equal(forBrowser(next).length, 0);
+  assert.equal(events(next).at(-1)?.enabled, false);
+  next.message({ type: 'camera_source_status', source: 'browser' });
+  assert.equal(forBrowser(next).length, 1);
+  // The confirmation does not turn on a camera that the policy does not want.
+  f.bridge.setCameraPolicy(() => false);
+  const count = events(next).length;
+  next.message({ type: 'camera_source_status', source: 'browser' });
+  assert.equal(events(next).length, count);
+});
