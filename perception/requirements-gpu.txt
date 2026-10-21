@@ -6,6 +6,9 @@
 #
 # NVIDIA (bibliothèques CUDA/cuDNN compatibles fournies par les extras pip) :
 onnxruntime-gpu[cuda,cudnn]==1.30.0
+# ORT 1.30 est compilé pour CUDA 13.0. Le runtime 13.4 que l'extra [cuda] résout plante
+# (SIGSEGV à l'initialisation) avec certains pilotes, notamment sous WSL2 : rester en 13.0.
+nvidia-cuda-runtime==13.0.96
 #
 # Windows, GPU AMD ou Intel via DirectX 12 :
 # onnxruntime-directml==1.24.4
