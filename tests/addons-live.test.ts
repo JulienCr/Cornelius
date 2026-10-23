@@ -290,7 +290,7 @@ test('Home Assistant passe par le pont natif, attend le résultat et ignore le r
     },
   });
   await f.ready();
-  const args = { entityId: 'light.salon', action: 'turn_on', brightnessPct: 40 };
+  const args = { entityIds: ['light.salon'], action: 'turn_on', brightnessPct: 40 };
   f.emit(f.call('ha-call', 'home_assistant__control', args));
   f.emit(f.call('ha-call', 'home_assistant__control', args));
   f.emit(f.completed);
@@ -330,7 +330,7 @@ test('la clôture de session annule le signal transmis au contrôle Home Assista
   await f.ready();
   f.emit(
     f.call('ha-cancel', 'home_assistant__control', {
-      entityId: 'light.salon',
+      entityIds: ['light.salon'],
       action: 'turn_on',
       brightnessPct: null,
     }),

@@ -30,6 +30,10 @@ export async function fakeHomeAssistant() {
     ['switch.bureau', ['Bureau secret']],
     ['light.cachee', ['Lampe cachée']],
   ]);
+  // Zones, appareils et rattachements du registre d’entités (area_id, device_id).
+  const areas: { area_id: string; name: string }[] = [];
+  const devices: { id: string; area_id: string | null }[] = [];
+  const entityLinks = new Map<string, { area_id?: string; device_id?: string }>();
   const calls: { path: string; body: Record<string, unknown> }[] = [];
   // Entrées de registre ajoutées par un test (capteurs, grand catalogue).
   const registry: Record<string, unknown>[] = [];
@@ -42,6 +46,7 @@ export async function fakeHomeAssistant() {
     readStatus: 200,
     assistDenied: false,
     aliasBatchDenied: false,
+    areasDenied: false,
     malformed: false,
     holdRead: false,
   };
@@ -121,13 +126,33 @@ export async function fakeHomeAssistant() {
         result = Object.fromEntries(
           request.entity_ids.map((id: string) => [
             id,
-            aliases.has(id) ? { entity_id: id, aliases: aliases.get(id) } : null,
+            aliases.has(id) || entityLinks.has(id)
+              ? { entity_id: id, aliases: aliases.get(id) ?? [], ...entityLinks.get(id) }
+              : null,
           ]),
         );
       if (request.type === 'config/entity_registry/get')
-        result = aliases.has(request.entity_id)
-          ? { entity_id: request.entity_id, aliases: aliases.get(request.entity_id) }
-          : null;
+        result =
+          aliases.has(request.entity_id) || entityLinks.has(request.entity_id)
+            ? {
+                entity_id: request.entity_id,
+                aliases: aliases.get(request.entity_id) ?? [],
+                ...entityLinks.get(request.entity_id),
+              }
+            : null;
+      if (request.type === 'config/area_registry/list' && options.areasDenied) {
+        socket.send(
+          JSON.stringify({
+            id: request.id,
+            type: 'result',
+            success: false,
+            error: { code: 'unknown_error', message: 'Registry unavailable' },
+          }),
+        );
+        return;
+      }
+      if (request.type === 'config/area_registry/list') result = areas;
+      if (request.type === 'config/device_registry/list') result = devices;
       if (request.type === 'homeassistant/expose_entity/list') {
         if (options.assistDenied) {
           socket.send(
@@ -190,11 +215,15 @@ export async function fakeHomeAssistant() {
     token,
     states,
     aliases,
+    areas,
+    devices,
+    entityLinks,
     registry,
     calls,
     wsCalls,
     options,
     emit,
+    emitEvent,
     emitRegistry,
     releaseRead: () => releaseRead?.(),
     drop: () => {

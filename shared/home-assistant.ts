@@ -25,6 +25,8 @@ export interface HomeAssistantEntity {
   id: string;
   name: string;
   aliases: string[];
+  /** Nom de la zone Home Assistant (absent des anciens catalogues). */
+  area?: string;
   domain: HomeAssistantDomain;
   state: string;
   brightness: boolean;
@@ -55,7 +57,7 @@ export interface HomeAssistantView {
 }
 
 export interface HomeAssistantCommand {
-  entityId: string;
+  entityIds: string[];
   action: 'read' | 'turn_on' | 'turn_off';
   brightnessPct: number | null;
 }
