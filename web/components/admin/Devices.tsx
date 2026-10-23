@@ -9,6 +9,7 @@ import { Camera } from './Camera';
 import { EngagementSettings } from './EngagementSettings';
 import { RecognitionSettings } from './RecognitionSettings';
 import { PrivacyMode } from './PrivacyMode';
+import { DefaultProfile } from './DefaultProfile';
 import { SessionMode } from './SessionMode';
 import { AdmissionSoundSettings } from './AdmissionSoundSettings';
 import { GreetingSettings } from './GreetingSettings';
@@ -56,6 +57,7 @@ export function Devices({
       <SessionMode state={state} status={status} run={run} />
       <SilenceCloseSettings state={state} run={run} />
       <PrivacyMode state={state} run={run} />
+      <DefaultProfile state={state} run={run} />
       <div className="admin-voice-columns">
         <GreetingSettings state={state} run={run} />
         <AdmissionSoundSettings state={state} run={run} />

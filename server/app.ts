@@ -1169,6 +1169,21 @@ export async function createApp(
     controller.setPrivacyMode(request.body.enabled);
     return controller.snapshot();
   });
+  const defaultProfileSchema = compile<{ profileId: string | null }>({
+    type: 'object',
+    additionalProperties: false,
+    required: ['profileId'],
+    properties: { profileId: { type: ['string', 'null'], maxLength: 128 } },
+  });
+  app.patch('/api/admin/default-profile', { preHandler: requireAdmin }, async (request, reply) => {
+    if (!defaultProfileSchema(request.body) || request.body.profileId === '')
+      return reply.code(400).send({ error: 'Profil par défaut invalide.' });
+    const { profileId } = request.body;
+    if (profileId !== null && !profiles.get(profileId))
+      return reply.code(400).send({ error: 'Profil introuvable.' });
+    controller.setDefaultProfileId(profileId);
+    return controller.snapshot();
+  });
   app.patch('/api/admin/presence-timings', { preHandler: requireAdmin }, async (request, reply) => {
     if (!isPresenceTimings(request.body))
       return reply.code(400).send({

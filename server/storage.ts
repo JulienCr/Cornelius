@@ -371,6 +371,12 @@ export const migrations: readonly string[] = [
     source TEXT NOT NULL DEFAULT 'server' CHECK (source IN ('server', 'browser'))
   ) STRICT;
   INSERT OR IGNORE INTO camera_source (id) VALUES (1);`,
+  // Profile used when nobody is recognized (NULL: household).
+  `CREATE TABLE IF NOT EXISTS default_profile (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    profile_id TEXT REFERENCES profiles(id) ON DELETE SET NULL
+  ) STRICT;
+  INSERT OR IGNORE INTO default_profile (id) VALUES (1);`,
 ];
 
 /** The server owns this connection. Backups include WAL changes via SQLite itself. */
@@ -536,6 +542,15 @@ export class SessionPreferences {
     this.db
       .prepare('UPDATE session_preferences SET privacy_mode = ? WHERE id = 1')
       .run(Number(enabled));
+  }
+
+  getDefaultProfileId(): string | null {
+    const row = this.db.prepare('SELECT profile_id FROM default_profile WHERE id = 1').get();
+    return typeof row?.profile_id === 'string' ? row.profile_id : null;
+  }
+
+  setDefaultProfileId(profileId: string | null): void {
+    this.db.prepare('UPDATE default_profile SET profile_id = ? WHERE id = 1').run(profileId);
   }
 
   getPresenceTimings(): PresenceTimings {

@@ -147,6 +147,18 @@ Avec le **mode vie privée** (rubrique « Quand il écoute », désactivé par d
 
 Les images de la caméra et les visages restent sur l’ordinateur. Le son du micro et le texte de la conversation partent chez OpenAI seulement pendant une conversation. Le détail est dans [Confidentialité](../reference/confidentialite.md).
 
+## Profil par défaut
+
+Par défaut, une conversation sans personne reconnue se déroule au nom du foyer : pas de mémoire, de sources ni d’agents personnels. Dans l’administration, « Conversations au nom de » permet de choisir un profil à la place, par exemple dans un foyer d’une seule personne ou sans caméra.
+
+- Une personne reconnue par la caméra remplace toujours le profil par défaut.
+- Devant plusieurs personnes, le miroir revient au foyer.
+- Le mode « Identification » et l’option « Personnes reconnues » exigent toujours un visage reconnu : le profil par défaut n’ouvre rien.
+- Un satellite garde son propre réglage, et un satellite rattaché à personne reste au foyer.
+- Supprimer le profil par défaut ramène au foyer.
+
+Attention : une personne seule devant le miroir, un invité par exemple, accède à la mémoire du profil par défaut. Ce qu’elle dit peut aussi y être enregistré.
+
 ## Miroir ouvert dans un autre onglet
 
 Un seul onglet à la fois peut être le miroir : le dernier ouvert prend la main. L’onglet précédent affiche « Ce miroir est affiché dans un autre onglet. » et un bouton « Afficher ici ».

@@ -51,6 +51,8 @@ export interface SessionPreferencesStore {
   setManualStop(stopped: boolean): void;
   getPrivacyMode?(): boolean;
   setPrivacyMode?(enabled: boolean): void;
+  getDefaultProfileId?(): string | null;
+  setDefaultProfileId?(profileId: string | null): void;
   getSessionMode?(): SessionMode;
   setSessionMode?(mode: SessionMode): void;
   getWakeWordEnabled?(): boolean;
@@ -171,6 +173,7 @@ export class SessionController {
   memoryProfileId(): string | null {
     // Satellite : le profil rattaché à sa pièce (choisi dans l’administration), ou personne.
     if (this.satelliteSession()) return this.profile?.id ?? null;
+    if (this.selection === 'default') return this.profile?.id ?? null;
     const input = this.rawObservation;
     if (
       !input ||
@@ -210,6 +213,7 @@ export class SessionController {
   private diagnostic: string | null = null;
   private handledCalls = new Set<string>();
   private privacyMode = false;
+  private defaultProfileId: string | null = null;
   private wakeWordEnabled = false;
   private advancedAudioBuffer = false;
   private orbScale = 100;
@@ -251,6 +255,12 @@ export class SessionController {
     this.session.manualStop = preferences?.getManualStop() ?? false;
     this.session.mode = preferences?.getSessionMode?.() ?? 3;
     this.privacyMode = preferences?.getPrivacyMode?.() ?? false;
+    this.defaultProfileId = preferences?.getDefaultProfileId?.() ?? null;
+    const startup = this.defaultProfile();
+    if (startup) {
+      this.profile = startup;
+      this.selection = 'default';
+    } else this.defaultProfileId = null;
     this.wakeWordEnabled =
       this.session.mode === 4 || (preferences?.getWakeWordEnabled?.() ?? false);
     if (this.session.mode === 4) preferences?.setWakeWordEnabled?.(true);
@@ -385,6 +395,7 @@ export class SessionController {
       setup: { ...this.setup },
       openaiBlocked: this.isOpenAIBlocked(),
       privacyMode: this.privacyMode,
+      defaultProfileId: this.defaultProfileId,
       advancedAudioBuffer: this.advancedAudioBuffer,
       orbScale: this.orbScale,
       speechVoice: this.speechVoice,
@@ -433,8 +444,8 @@ export class SessionController {
               profileId: person.profileId,
               engaged:
                 engaged &&
-                (this.profile
-                  ? person.profileId === this.profile.id
+                (this.recognizedProfile()
+                  ? person.profileId === this.profile!.id
                   : this.observation!.people.length === 1),
             }))
           : [],
@@ -548,7 +559,7 @@ export class SessionController {
       this.retiredProducers.add(previous.producerBootId);
       this.resetPresence();
       this.close('Perception redémarrée.');
-      this.changeProfile(null, 'household', false);
+      this.releaseProfile(false);
     }
     if (input.health !== 'ok') {
       this.cameraFaultSince ??= now;
@@ -564,7 +575,7 @@ export class SessionController {
       this.observation = structuredClone(input);
       this.resetPresence();
       this.close('Caméra indisponible.');
-      this.changeProfile(null, 'household', false);
+      this.releaseProfile(false);
       this.publish();
       return true;
     }
@@ -686,7 +697,7 @@ export class SessionController {
     } else if (
       this.voiceRecognition &&
       running &&
-      this.profile === null &&
+      (this.profile === null || this.selection === 'default') &&
       this.selection !== 'explicit' &&
       this.voiceIdentityUntil !== null &&
       now <= this.voiceIdentityUntil &&
@@ -709,9 +720,9 @@ export class SessionController {
     stable: boolean,
     now: number,
   ): void {
-    const active = this.profile
-      ? people.find((person) => person.profileId === this.profile!.id)
-      : undefined;
+    // The default profile is bound to no face track, so it is never kept as active.
+    const tracked = this.recognizedProfile();
+    const active = tracked ? people.find((person) => person.profileId === tracked.id) : undefined;
     if (active) {
       // La première personne reconnue garde son profil, même si une deuxième apparaît.
       this.profileTrackId = active.trackId;
@@ -723,7 +734,7 @@ export class SessionController {
       // Le visage suivi a été perdu et un visage encore inconnu apparaît : la reconnaissance
       // a le délai de départ pour le confirmer avant que le profil soit retiré. Le même
       // suivi sans identité signifie au contraire une contradiction ou un maintien expiré.
-      (this.profile !== null &&
+      (tracked !== null &&
         this.profileSeenAt !== null &&
         now - this.profileSeenAt < this.timings.absenceMs &&
         people.every(
@@ -738,7 +749,8 @@ export class SessionController {
     if (!stable) return;
     const person = people[0]!;
     const profile = person.profileId ? this.profiles.get(person.profileId) : null;
-    this.changeProfile(profile, profile ? 'automatic' : 'household');
+    if (profile) this.changeProfile(profile, 'automatic');
+    else this.releaseProfile();
     if (profile) {
       this.profileTrackId = person.trackId;
       this.profileSeenAt = now;
@@ -752,7 +764,7 @@ export class SessionController {
     if (this.diagnostic === unknownPersonDiagnostic) this.diagnostic = null;
     this.resetPresence();
     this.close('Fin de présence.');
-    this.changeProfile(null, 'household', false);
+    this.releaseProfile(false);
   }
 
   private resetPresence(): void {
@@ -805,6 +817,7 @@ export class SessionController {
     selection: MirrorState['selection'],
     restart = true,
   ): void {
+    const wasDefault = this.selection === 'default';
     this.selection = selection;
     if (this.profile?.id === profile?.id) return;
     this.profileTrackId = null;
@@ -827,7 +840,10 @@ export class SessionController {
     this.session.contextVersion++;
     if (running && restart) {
       // Une autre personne : la réouverture suit les règles d’ouverture, comme une arrivée.
-      this.reopenAfterClose = 'automatic';
+      // Voice mode: the close path drops any automatic profile, so a recognition that
+      // replaced the default must reopen as 'resume' to survive it.
+      this.reopenAfterClose =
+        wasDefault && selection === 'automatic' && this.session.mode === 4 ? 'resume' : 'automatic';
       this.close('Changement de profil.');
     }
   }
@@ -860,9 +876,13 @@ export class SessionController {
   }
 
   profilesChanged(): void {
+    if (this.defaultProfileId && !this.defaultProfile()) {
+      this.defaultProfileId = null;
+      this.preferences?.setDefaultProfileId?.(null);
+    }
     if (this.profile) {
       const current = this.profiles.get(this.profile.id);
-      if (!current) this.changeProfile(null, 'household');
+      if (!current) this.releaseProfile();
       else if (current.name !== this.profile.name) {
         this.profile = current;
         this.session.contextVersion++;
@@ -892,6 +912,37 @@ export class SessionController {
     this.publish();
   }
 
+  /** Profil par défaut, ou null s'il n'est pas réglé ou n'existe plus. */
+  private defaultProfile(): Profile | null {
+    return this.defaultProfileId ? this.profiles.get(this.defaultProfileId) : null;
+  }
+
+  /** Profil lié à une personne reconnue ou choisi à la main, donc pas le profil par défaut. */
+  private recognizedProfile(): Profile | null {
+    return this.selection === 'default' ? null : this.profile;
+  }
+
+  /** Personne non reconnue : le profil par défaut s'il existe, sinon le foyer. */
+  private releaseProfile(restart = true): void {
+    const profile = this.defaultProfile();
+    this.changeProfile(profile, profile ? 'default' : 'household', restart);
+  }
+
+  getDefaultProfileId(): string | null {
+    return this.defaultProfileId;
+  }
+
+  setDefaultProfileId(profileId: string | null): void {
+    if (profileId !== null && !this.profiles.get(profileId)) throw new Error('Profil introuvable.');
+    this.defaultProfileId = profileId;
+    this.preferences?.setDefaultProfileId?.(profileId);
+    // Several people in view: stay household, the default does not apply (privacy).
+    const crowded = (this.observation?.people.length ?? 0) > 1;
+    if (this.selection === 'default' || (this.selection === 'household' && !crowded))
+      this.releaseProfile();
+    this.publish();
+  }
+
   setSessionMode(mode: SessionMode): void {
     if (this.session.mode === mode) return;
     if (this.session.mode === 4 && mode !== 4) {
@@ -905,8 +956,8 @@ export class SessionController {
     if (mode === 4) {
       if (!this.wakeWordEnabled) this.preferences?.setWakeWordEnabled?.(true);
       this.wakeWordEnabled = true;
-      this.profile = null;
-      this.selection = 'household';
+      this.profile = this.defaultProfile();
+      this.selection = this.profile ? 'default' : 'household';
       this.cards = [];
       this.session = {
         ...this.session,
@@ -1066,7 +1117,7 @@ export class SessionController {
   /** Une personne reconnue est devant le miroir et un profil est actif. */
   private knownPersonPresent(): boolean {
     return (
-      this.profile !== null &&
+      this.recognizedProfile() !== null &&
       !!this.observation?.people.some((person) => person.profileId !== null)
     );
   }
@@ -1176,11 +1227,11 @@ export class SessionController {
         ? null
         : `presence:${this.presentSince}`;
     if (this.session.mode === 2)
-      return this.profile === null ||
+      return this.recognizedProfile() === null ||
         this.presentSince === null ||
         this.now() - this.presentSince < this.timings.presenceMs
         ? null
-        : `identified:${this.profile.id}:${this.presentSince}`;
+        : `identified:${this.profile!.id}:${this.presentSince}`;
     return this.engagementId === null ? null : `engaged:${this.engagementId}`;
   }
 
@@ -1401,7 +1452,7 @@ export class SessionController {
       released ||
       (this.session.mode === 4 && this.selection === 'automatic' && reopen !== 'resume')
     )
-      this.changeProfile(null, 'household', false);
+      this.releaseProfile(false);
     if (reopen) {
       this.consumedTrigger = null;
       this.maybeOpen(reopen);
@@ -1696,7 +1747,7 @@ export class SessionController {
       if (!this.sensorHealthy()) {
         this.resetPresence();
         this.close('Perception sans nouvelles observations.');
-        this.changeProfile(null, 'household', false);
+        this.releaseProfile(false);
       }
       if (this.absenceExpired(now)) this.departure();
       else if (

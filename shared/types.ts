@@ -112,6 +112,8 @@ export interface MirrorState {
   setup?: MirrorSetup;
   openaiBlocked: boolean;
   privacyMode: boolean;
+  /** Profil au nom duquel se déroulent les conversations sans personne reconnue ; null : le foyer. */
+  defaultProfileId?: string | null;
   advancedAudioBuffer: boolean;
   /** Taille de l’orbe sur le miroir, en pourcentage (100 : taille d’origine). Absent : 100. */
   orbScale?: number;
@@ -142,7 +144,8 @@ export interface MirrorState {
   session: SessionState;
   presence: PresenceView;
   activeProfile: Profile | null;
-  selection: 'household' | 'automatic' | 'explicit';
+  /** 'default' : profil par défaut du miroir, sans personne reconnue. */
+  selection: 'household' | 'default' | 'automatic' | 'explicit';
   profiles: Profile[];
   cards: DisplayCard[];
   ambientDisplays: AmbientDisplay[];

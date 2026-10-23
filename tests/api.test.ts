@@ -121,12 +121,39 @@ test('le miroir est public et les droits administrateur restent protégés', asy
     ['POST', '/api/admin/profiles', { name: 'Alice' }],
     ['PATCH', '/api/admin/profiles/unknown', { name: 'Alice' }],
     ['DELETE', '/api/admin/profiles/unknown', undefined],
+    ['PATCH', '/api/admin/default-profile', { profileId: null }],
     ['POST', '/api/commands', { type: 'stop' }],
   ] as const) {
     const response = await f.app.inject({ method, url, headers: { origin, cookie }, payload });
     assert.equal(response.statusCode, 401, `${method} ${url}`);
   }
   assert.equal(f.profiles.list().length, 0);
+});
+
+test('le profil par défaut se règle côté administrateur, valide et efface avec le profil', async (t) => {
+  const f = await fixture(t);
+  const headers = { origin, cookie: await f.login() };
+  const profile = f.profiles.create('Alice');
+  const patch = async (payload: object) =>
+    await f.app.inject({ method: 'PATCH', url: '/api/admin/default-profile', headers, payload });
+  for (const payload of [{ profileId: 'missing' }, { profileId: '' }, { profileId: 3 }, {}]) {
+    const response = await patch(payload);
+    assert.equal(response.statusCode, 400, JSON.stringify(payload));
+    assert.ok(response.json<{ error: string }>().error);
+  }
+  const set = await patch({ profileId: profile.id });
+  assert.equal(set.statusCode, 200);
+  assert.equal(set.json().state.defaultProfileId, profile.id);
+  assert.equal(set.json().state.activeProfile.id, profile.id);
+  const removed = await f.app.inject({
+    method: 'DELETE',
+    url: `/api/admin/profiles/${profile.id}`,
+    headers,
+  });
+  assert.equal(removed.statusCode, 200);
+  const state = (await f.app.inject({ url: '/api/state' })).json().state;
+  assert.equal(state.defaultProfileId, null);
+  assert.equal(state.activeProfile, null);
 });
 
 test('l’état diffusé dit ce qui manque au premier lancement sans exposer aucun secret', async (t) => {
