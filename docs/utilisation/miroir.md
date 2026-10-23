@@ -152,14 +152,15 @@ Les images de la caméra et les visages restent sur l’ordinateur. Le son du mi
 Par défaut, une conversation sans personne reconnue se déroule au nom du foyer : pas de mémoire, de sources ni d’agents personnels. Dans l’administration, « Conversations au nom de » permet de choisir un profil à la place, par exemple dans un foyer d’une seule personne ou sans caméra.
 
 - Une personne reconnue par la caméra remplace toujours le profil par défaut.
-- Cornelius salue le profil par défaut par son prénom, même si personne n’est reconnu. En mode voix, il ne le présente pas comme reconnu par la caméra.
+- Cornelius s’adresse au profil par défaut comme à cette personne : il la salue par son prénom et ne mentionne pas l’absence de reconnaissance.
+- Les agents du profil par défaut (Hermes) répondent sans caméra, ou devant une seule personne.
 - L’option « Réserver aux personnes reconnues » de Home Assistant exige toujours un visage reconnu : le profil par défaut ne suffit pas.
 - Devant plusieurs personnes, le miroir revient au foyer.
 - Le mode « Identification » et l’option « Personnes reconnues » exigent toujours un visage reconnu : le profil par défaut n’ouvre rien.
 - Un satellite garde son propre réglage, et un satellite rattaché à personne reste au foyer.
 - Supprimer le profil par défaut ramène au foyer.
 
-Attention : une personne seule devant le miroir, un invité par exemple, accède à la mémoire du profil par défaut. Ce qu’elle dit peut aussi y être enregistré.
+Attention : une personne seule devant le miroir, un invité par exemple, accède à la mémoire du profil par défaut. Ce qu’elle dit peut aussi y être enregistré. Elle peut aussi interroger Hermes au nom de ce profil, et sans caméra n’importe qui le peut. Les résultats peuvent s’afficher sur le miroir. Cela vaut aussi pour un profil choisi dans l’administration.
 
 ## Miroir ouvert dans un autre onglet
 

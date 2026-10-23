@@ -57,11 +57,13 @@ Si une partie du catalogue ne répond pas, la carte indique « Catalogue partiel
 
 La personne doit être **seule devant le miroir et reconnue**. Avec « Cornelius » pour tout le monde, il faut donc cocher **Reconnaître la personne pendant la conversation** (voir [Ouverture et présence](ouverture-et-presence.md)).
 
+Excepté avec un profil par défaut, ou un profil choisi dans l’administration. Hermes répond alors à toute personne seule devant le miroir, ou à n’importe qui s’il n’y a pas de caméra. Les résultats peuvent s’afficher sur le miroir.
+
 On demande simplement : « Demande à Hermes de préparer trois idées de sorties pour samedi ». Cornelius transmet la demande, avec seulement le contexte utile. Il ne transmet ni la transcription complète, ni la mémoire personnelle, ni d’images.
 
 La réponse immédiate donne l’état reçu de Hermes. « En attente » ou « En cours » ne veut pas dire que l’action a réussi. On peut ensuite demander où en est la tâche, apporter une précision ou demander l’arrêt.
 
-Quand une tâche se termine plus tard, Cornelius l’annonce et affiche une carte, seulement si son propriétaire est seul et reconnu devant le miroir et que personne ne parle. La personne peut alors demander le contenu de la réponse. Un résultat n’est jamais montré à quelqu’un d’autre, et un même état n’est pas annoncé deux fois, même après un redémarrage.
+Quand une tâche se termine plus tard, Cornelius l’annonce et affiche une carte, seulement si son propriétaire est seul et reconnu devant le miroir et que personne ne parle. Avec un profil par défaut ou choisi dans l’administration, la carte s’affiche aussi devant une personne seule non reconnue, ou sans caméra. La personne peut alors demander le contenu de la réponse. Un résultat n’est jamais montré à quelqu’un d’autre, et un même état n’est pas annoncé deux fois, même après un redémarrage.
 
 ## Depuis l’administration
 

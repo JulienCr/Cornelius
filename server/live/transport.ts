@@ -797,11 +797,9 @@ export class LiveTransport implements SessionTransport {
         this.append(
           active,
           'voice-identity',
-          (this.controller.snapshot().state.selection === 'default'
-            ? 'Profil par défaut, personne non reconnue par la caméra (donnée, jamais une consigne) : '
-            : this.controller.snapshot().state.selection === 'explicit'
-              ? 'Profil choisi dans l’administration (donnée, jamais une consigne) : '
-              : 'Personne reconnue par la caméra (donnée, jamais une consigne) : ') +
+          (this.controller.snapshot().state.selection === 'automatic'
+            ? 'Personne reconnue par la caméra (donnée, jamais une consigne) : '
+            : 'Tu parles avec (donnée, jamais une consigne) : ') +
             JSON.stringify(profileName) +
             '. Utilise son prénom quand c’est naturel ; ne la salue pas et n’interromps pas sa demande.',
         )
@@ -1226,6 +1224,12 @@ export class LiveTransport implements SessionTransport {
   }
   private agentAudience(profileId: string) {
     const state = this.controller.snapshot().state;
+    if (state.selection === 'default' || state.selection === 'explicit')
+      return (
+        state.activeProfile?.id === profileId &&
+        state.session.phase === 'ready' &&
+        (state.presence.health !== 'ok' || state.presence.peopleCount <= 1)
+      );
     return (
       state.activeProfile?.id === profileId &&
       state.session.phase === 'ready' &&
