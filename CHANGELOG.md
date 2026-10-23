@@ -6,6 +6,12 @@ Le fonctionnement actuel est décrit dans la [documentation](docs/README.md). Ce
 
 ## Non publié
 
+### 2026-10-23 : sessions d’administration durables
+
+**Modifié**
+
+- Une connexion à l’administration survit à un redémarrage du serveur. Elle garde la même durée : une heure, prolongée à chaque action. Seule l’empreinte du jeton est stockée dans SQLite.
+
 ### 2026-10-23 : profil par défaut
 
 **Ajouté**

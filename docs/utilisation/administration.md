@@ -9,7 +9,7 @@ L’administration est une page web servie par Cornelius, à l’adresse `http:/
 - **Depuis la maison seulement.** Sur cet ordinateur, à `http://127.0.0.1:3000/admin` ; depuis un téléphone ou un autre ordinateur du réseau local, à `https://<adresse de l’ordinateur>:3443/admin` (voir [Accès depuis le réseau local](reseau-local.md)). Une adresse Internet est toujours refusée.
 - **Mot de passe.** L’écran « Espace administration » demande le « Mot de passe administrateur », défini au départ par `CORNELIUS_ADMIN_PASSWORD` dans le fichier `.env` (`cornelius` après `pnpm run setup`). Changez-le dans **Mise en route**, carte « Mot de passe administrateur » (8 caractères au moins) : il remplace aussitôt celui de `.env`, sans redémarrage, et les autres navigateurs connectés doivent se reconnecter. Tant que le mot de passe de départ reste en place, la rubrique « Mise en route » le signale.
 - **Tentatives limitées.** Dix essais par minute au plus, réglables avec `CORNELIUS_LOGIN_RATE_LIMIT` dans `.env`.
-- **Durée de la session.** Une connexion reste valable une heure, et chaque action la prolonge d’une heure. Elle se perd aussi quand le serveur redémarre. L’écran de connexion revient alors avec « Votre session a expiré ou le serveur a redémarré. Reconnectez cet espace. ».
+- **Durée de la session.** Une connexion reste valable une heure, et chaque action la prolonge d’une heure. Elle survit à un redémarrage du serveur. Une fois l’heure écoulée, l’écran de connexion revient avec « Votre session a expiré. Reconnectez cet espace. ».
 
 Le miroir, lui, ne demande aucun mot de passe. Pour l’adresse du miroir et la différence entre `127.0.0.1` et `localhost`, voir [Le miroir](miroir.md).
 

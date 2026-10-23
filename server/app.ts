@@ -4,6 +4,12 @@ import { isOrbScale, ORB_SCALE_MAX, ORB_SCALE_MIN } from '../shared/display.js';
 import { AdminPassword, newPasswordError } from './admin-password.js';
 import { SecretStore, secretValueError } from './secrets.js';
 import { TrustedDevices } from './trusted-devices.js';
+import {
+  AdminSessions,
+  adminSessionSeconds,
+  maxAdminSessions,
+  sessionHash,
+} from './admin-sessions.js';
 import { allowedHostname, isLoopback, isPrivateAddress, localAddresses } from './network.js';
 import { isOpening } from '../shared/opening.js';
 import { duplicateNameMessage } from '../shared/profile-names.js';
@@ -170,6 +176,7 @@ export async function createApp(
   }
   const profiles = new ProfileRepository(db);
   const trustedDevices = new TrustedDevices(db, now);
+  const adminSessions = new AdminSessions(db, now);
   const adminPassword = new AdminPassword(db, config.adminPassword, DEFAULT_ADMIN_PASSWORD, now);
   const defaultPassword = () => adminPassword.isDefault();
   if (defaultPassword())
@@ -436,13 +443,6 @@ export async function createApp(
     return ['connecting', 'ready'].includes(session.phase) && !session.satellite;
   });
   const app = Fastify({ logger: false, bodyLimit: 16_384, requestTimeout: 10_000 });
-  // Sessions administrateur en mémoire (un redémarrage les ferme), avec une expiration
-  // glissante : chaque requête authentifiée repousse la fin d’une heure. La table reste rangée
-  // de la moins récemment utilisée à la plus récente : au-delà de maxAdminSessions, une
-  // nouvelle connexion ferme la plus ancienne au lieu de refuser le bon mot de passe.
-  const adminSessionSeconds = 3600;
-  const maxAdminSessions = 64;
-  const sessions = new Map<string, number>();
   const clients = new Map<
     WebSocket,
     { role: Role; sessionId: string | null; kioskId: string | null; remote: boolean }
@@ -458,22 +458,14 @@ export async function createApp(
   await app.register(rateLimit, { global: false });
   await app.register(websocket, { options: { maxPayload: 256_000 } });
 
-  function purgeSessions() {
-    for (const [id, expiresAt] of sessions) if (expiresAt <= now()) sessions.delete(id);
-  }
-
   function adminIdentity(request: FastifyRequest): string | null {
     const id = request.cookies[adminCookie];
-    const expiresAt = id ? sessions.get(id) : undefined;
-    if (!id || expiresAt === undefined || expiresAt <= now()) return null;
-    return id;
+    return id && adminSessions.isValid(id) ? id : null;
   }
 
   /** Ouvre ou prolonge une session : une heure à partir de maintenant, côté serveur et cookie. */
   function extendAdminSession(id: string, request: FastifyRequest, reply: FastifyReply) {
-    // Retirer puis remettre la place en fin de table : elle devient la plus récente.
-    sessions.delete(id);
-    sessions.set(id, now() + adminSessionSeconds * 1000);
+    adminSessions.touch(id);
     // La réponse d’ouverture d’un WebSocket ne transporte pas d’en-têtes : seul le serveur
     // prolonge alors la session.
     if (request.ws) return;
@@ -486,11 +478,16 @@ export async function createApp(
     });
   }
 
+  function closeAdminSockets(hashes: string[]) {
+    for (const [socket, client] of clients)
+      if (client.sessionId && hashes.includes(sessionHash(client.sessionId)))
+        socket.close(1008, 'Déconnexion');
+  }
+
   /** Ferme une session et les pages d’administration qui l’utilisent encore. */
   function closeAdminSession(id: string) {
-    sessions.delete(id);
-    for (const [socket, client] of clients)
-      if (client.sessionId === id) socket.close(1008, 'Déconnexion');
+    adminSessions.close(id);
+    closeAdminSockets([sessionHash(id)]);
   }
 
   // Le miroir est public sur le poste : ce cookie n’est qu’un identifiant de corrélation.
@@ -510,8 +507,7 @@ export async function createApp(
 
   function clientActive(client: { role: Role; sessionId: string | null }): boolean {
     if (client.role === 'kiosk') return true;
-    const expiresAt = client.sessionId ? sessions.get(client.sessionId) : undefined;
-    return expiresAt !== undefined && expiresAt > now();
+    return adminSessions.isValid(client.sessionId ?? undefined);
   }
 
   const requireAdmin = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
@@ -846,19 +842,18 @@ export async function createApp(
           error:
             'Mot de passe par défaut : changez-le d’abord dans l’administration, sur l’ordinateur du miroir (Mise en route).',
         });
-      purgeSessions();
       const existing = request.cookies[adminCookie];
-      if (existing) sessions.delete(existing);
+      if (existing) adminSessions.close(existing);
       // Navigateurs oubliés, fenêtres privées : la session la moins récemment utilisée laisse
       // sa place, plutôt que de bloquer l’administration jusqu’à leur expiration.
-      while (sessions.size >= maxAdminSessions) {
-        const oldest = sessions.keys().next().value!;
-        closeAdminSession(oldest);
+      const token = randomBytes(32).toString('base64url');
+      const evicted = adminSessions.open(token);
+      closeAdminSockets(evicted);
+      for (let index = 0; index < evicted.length; index++)
         logs.write('info', 'local', 'Session administrateur la plus ancienne fermée', {
           limit: maxAdminSessions,
         });
-      }
-      extendAdminSession(randomBytes(32).toString('base64url'), request, reply);
+      extendAdminSession(token, request, reply);
       const kioskId = kioskIdentity(request, reply);
       // Se connecter depuis un autre appareil l'autorise aussi comme miroir.
       if (!fromMachine(request)) trustedDevices.add(kioskId);
@@ -881,7 +876,7 @@ export async function createApp(
       logs.addSecret(next as string);
       // Les autres navigateurs connectés doivent se reconnecter avec le nouveau mot de passe.
       const keep = adminIdentity(request);
-      for (const id of [...sessions.keys()]) if (id !== keep) closeAdminSession(id);
+      closeAdminSockets(adminSessions.closeAllExcept(keep));
       logs.write('info', 'local', 'Mot de passe administrateur changé');
       broadcast({ schemaVersion: 1, type: 'devices', status: devices() }, true);
       return { ok: true, source: adminPassword.source() };
