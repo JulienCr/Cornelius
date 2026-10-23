@@ -1713,6 +1713,12 @@ test('Home Assistant réservé : absent de la session anonyme, ajouté à la rec
   });
   await setImmediate();
   assert.deepEqual(recognizedCalls, [false]);
+  const logged = f.logs.snapshot().entries.filter((entry) => entry.source === 'outil');
+  assert.equal(logged.length, 1);
+  assert.equal(logged[0]!.level, 'warn');
+  assert.equal(logged[0]!.details.name, 'home_assistant__control');
+  assert.equal(logged[0]!.details.status, 'failed');
+  assert.equal(typeof logged[0]!.details.durationMs, 'number');
 
   const profile = f.profiles.create('Alice');
   f.recognize(profile.id);
@@ -1742,6 +1748,44 @@ test('mode voix : le prénom reconnu au mot d’appel devient un contexte, sans 
   assert.ok(!appends.some((event) => event.content.includes('Bonjour')));
   assert.ok(!f.sent.some((event) => event.type === 'session.commentary.append'));
   assert.equal(f.controller.snapshot().state.session.phase, 'ready');
+});
+
+test('un outil réussi est journalisé en info, sans ses arguments', async (t) => {
+  const homeAssistant = {
+    tools: () => [],
+    handles: (name: string) => name === 'home_assistant__control',
+    run: async () => ({
+      schemaVersion: 1 as const,
+      status: 'succeeded' as const,
+      result: null,
+      snapshotId: null,
+      actionRunId: null,
+      summary: 'Fait.',
+      error: null,
+    }),
+  };
+  const f = fixture(t, { mode: 1, integrations: { homeAssistant } });
+  await f.ready();
+  f.emit({
+    type: 'response.event',
+    delegation_id: 'maison',
+    event: {
+      type: 'response.output_item.done',
+      response_id: 'r1',
+      item: {
+        type: 'function_call',
+        call_id: 'c1',
+        name: 'home_assistant__control',
+        arguments: '{"entityId":"light.secret-salon"}',
+      },
+    },
+  });
+  await setImmediate();
+  const logged = f.logs.snapshot().entries.filter((entry) => entry.source === 'outil');
+  assert.equal(logged.length, 1);
+  assert.equal(logged[0]!.level, 'info');
+  assert.equal(logged[0]!.details.status, 'succeeded');
+  assert.ok(!JSON.stringify(logged).includes('secret-salon'));
 });
 
 test('profil par défaut : Home Assistant réservé ne le compte pas comme une personne reconnue', async (t) => {

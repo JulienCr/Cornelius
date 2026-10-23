@@ -6,6 +6,12 @@ Le fonctionnement actuel est décrit dans la [documentation](docs/README.md). Ce
 
 ## Non publié
 
+### 2026-10-23 : journal des actions
+
+**Ajouté**
+
+- Le journal liste chaque appel d’outil (origine « Outils ») avec son résultat et sa durée. Pour Home Assistant, il détaille aussi l’action, l’appareil, les refus et chaque requête envoyée (chemin, code de réponse, durée), sans l’adresse ni le jeton. Les commandes HTTP indiquent aussi leur durée en cas d’échec.
+
 ### 2026-10-23 : profil par défaut sans détour
 
 **Modifié**

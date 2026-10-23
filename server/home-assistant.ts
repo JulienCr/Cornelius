@@ -1,4 +1,4 @@
-import type { AddonHttpClient, ToolResult } from '../shared/addons.js';
+import { AddonCollectError, type AddonHttpClient, type ToolResult } from '../shared/addons.js';
 import {
   HOME_ASSISTANT_ENTITY_PATTERN,
   isControllable,
@@ -715,9 +715,7 @@ export class HomeAssistant {
     return name === 'home_assistant__control' || name === 'home_assistant__read';
   }
   private async readState(config: HomeAssistantConfig, id: string, signal: AbortSignal) {
-    const response = await this.http.fetch({
-      url: config.url + '/api/states/' + encodeURIComponent(id),
-      headers: { Authorization: 'Bearer ' + config.token },
+    const response = await this.rest(config, 'GET', '/api/states/' + encodeURIComponent(id), {
       signal,
       timeoutMs: 3000,
       maxBytes: 64 * 1024,
@@ -739,12 +737,77 @@ export class HomeAssistant {
       throw new HomeAssistantError('malformed', 'État Home Assistant invalide.');
     return { ...entity, aliases: this.entities.get(id)?.aliases ?? [] };
   }
+  /** One REST call, journaled by method and path only: the base URL and token never appear. */
+  private async rest(
+    config: HomeAssistantConfig,
+    method: 'GET' | 'POST',
+    path: string,
+    options: { body?: string; signal: AbortSignal; timeoutMs: number; maxBytes: number },
+  ) {
+    const startedAt = Date.now();
+    try {
+      const response = await this.http.fetch({
+        url: config.url + path,
+        method,
+        headers: {
+          Authorization: 'Bearer ' + config.token,
+          ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        },
+        ...options,
+      });
+      this.logs?.write(response.status < 400 ? 'info' : 'warn', 'home-assistant', 'Requête REST', {
+        method,
+        path,
+        status: response.status,
+        durationMs: Date.now() - startedAt,
+      });
+      return response;
+    } catch (error) {
+      this.logs?.write('warn', 'home-assistant', 'Requête REST échouée', {
+        method,
+        path,
+        code: error instanceof AddonCollectError ? error.code : 'unavailable',
+        durationMs: Date.now() - startedAt,
+      });
+      throw error;
+    }
+  }
+  /** Journals the tool input (never the token) and the outcome, refusals included. */
+  private async journaled(
+    args: unknown,
+    actor: 'luna' | 'admin',
+    work: () => Promise<ToolResult>,
+  ): Promise<ToolResult> {
+    const startedAt = Date.now();
+    const input = record(args);
+    const outcome = await work();
+    const failed = ['failed', 'cancelled', 'unknown'].includes(outcome.status);
+    this.logs?.write(failed ? 'warn' : 'info', 'home-assistant', 'Appel Home Assistant', {
+      actor,
+      action: input.action ?? 'read',
+      entityId: input.entityId,
+      data: input.brightnessPct == null ? undefined : { brightness_pct: input.brightnessPct },
+      status: outcome.status,
+      reason: outcome.error?.code,
+      message: failed ? outcome.summary : undefined,
+      durationMs: Date.now() - startedAt,
+    });
+    return outcome;
+  }
   /** Entrée réservée au pont vocal : respecte toujours les autorisations de Luna. */
   run(
     args: unknown,
     signal: AbortSignal,
     name = 'home_assistant__control',
     recognized = true,
+  ): Promise<ToolResult> {
+    return this.journaled(args, 'luna', () => this.runChecked(args, signal, name, recognized));
+  }
+  private runChecked(
+    args: unknown,
+    signal: AbortSignal,
+    name: string,
+    recognized: boolean,
   ): Promise<ToolResult> {
     // Défense en profondeur : l’outil est déjà masqué, un appel tardif reste refusé.
     if (this.config.knownPeopleOnly && !recognized)
@@ -815,7 +878,7 @@ export class HomeAssistant {
   }
   /** Appelée exclusivement par la route protégée de l'administration. */
   runManual(args: unknown, signal: AbortSignal): Promise<ToolResult> {
-    return this.execute(args, signal, 'admin');
+    return this.journaled(args, 'admin', () => this.execute(args, signal, 'admin'));
   }
   private async execute(
     args: unknown,
@@ -872,19 +935,21 @@ export class HomeAssistant {
           accepted: false,
         });
       sent = true;
-      const response = await this.http.fetch({
-        url: config.url + '/api/services/' + entity.domain + '/' + args.action,
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + config.token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          entity_id: entity.id,
-          ...(args.brightnessPct === null ? {} : { brightness_pct: args.brightnessPct }),
-        }),
-        signal: combined,
-        timeoutMs: 4000,
-        maxBytes: 64 * 1024,
-        // Aucune relance : un délai dépassé peut cacher une commande déjà exécutée.
-      });
+      const response = await this.rest(
+        config,
+        'POST',
+        '/api/services/' + entity.domain + '/' + args.action,
+        {
+          body: JSON.stringify({
+            entity_id: entity.id,
+            ...(args.brightnessPct === null ? {} : { brightness_pct: args.brightnessPct }),
+          }),
+          signal: combined,
+          timeoutMs: 4000,
+          maxBytes: 64 * 1024,
+          // Aucune relance : un délai dépassé peut cacher une commande déjà exécutée.
+        },
+      );
       if (response.status < 200 || response.status >= 300) {
         if (response.status >= 500)
           return tool(

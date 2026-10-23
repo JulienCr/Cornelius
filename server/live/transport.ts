@@ -112,6 +112,8 @@ interface ActiveSession {
   closing: boolean;
   finalized: boolean;
   calls: Set<string>;
+  /** Tool calls awaiting their output, for the journal. */
+  toolCalls: Map<string, { name: string; startedAt: number }>;
   toolCounts: Map<string, number>;
   responses: Set<string>;
   currentResponses: Map<string, string>;
@@ -323,6 +325,7 @@ export class LiveTransport implements SessionTransport {
       closing: false,
       finalized: false,
       calls: new Set(),
+      toolCalls: new Map(),
       toolCounts: new Map(),
       responses: new Set(),
       currentResponses: new Map(),
@@ -943,7 +946,25 @@ export class LiveTransport implements SessionTransport {
     active.completed.delete(delegation);
     this.send(active, { type: 'response.create' });
   }
+  private logToolCall(active: ActiveSession, callId: string, output: unknown) {
+    const call = active.toolCalls.get(callId);
+    if (!call) return;
+    active.toolCalls.delete(callId);
+    const result = object(output);
+    const status = typeof result.status === 'string' ? result.status : 'ok';
+    const error = object(result.error);
+    const text = typeof error.message === 'string' ? error.message : result.summary;
+    const failed = ['failed', 'cancelled', 'unknown'].includes(status);
+    this.logs?.write(failed ? 'warn' : 'info', 'outil', 'Outil exécuté', {
+      name: call.name,
+      status,
+      durationMs: this.now() - call.startedAt,
+      interactionId: active.scope.interactionId,
+      ...(typeof text === 'string' && text ? { message: text.slice(0, 300) } : {}),
+    });
+  }
   private sendItem(active: ActiveSession, callId: string, output: unknown) {
+    this.logToolCall(active, callId, output);
     if (active.finalized || active.closing || active.blocked || !active.attached) return;
     this.send(active, {
       type: 'response.item.create',
@@ -1076,6 +1097,10 @@ export class LiveTransport implements SessionTransport {
       )
         return;
       active.calls.add(item.call_id);
+      active.toolCalls.set(item.call_id, {
+        name: typeof item.name === 'string' ? item.name : '',
+        startedAt: this.now(),
+      });
       const countKey = delegationId || delegation;
       const toolCount = (active.toolCounts.get(countKey) ?? 0) + 1;
       active.toolCounts.set(countKey, toolCount);

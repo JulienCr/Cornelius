@@ -79,11 +79,15 @@ Le journal raconte, dans l’ordre, tout ce que fait Cornelius : connexion à Op
 Dans l’administration, rubrique **Journal**, carte « Journal détaillé » :
 
 - les 1 000 derniers événements depuis le démarrage du serveur, mis à jour toutes les 2 secondes ;
-- un filtre par origine (« Toutes les origines », « Conversation », « OpenAI », « Navigateur », « Périphériques », « Modules », « Commandes », « Mémoire »…). Les requêtes réussies au serveur sont masquées par défaut : choisissez l’origine « Requêtes au serveur » pour les voir ;
+- un filtre par origine (« Toutes les origines », « Conversation », « OpenAI », « Navigateur », « Périphériques », « Modules », « Commandes », « Outils », « Home Assistant », « Mémoire »…). Les requêtes réussies au serveur sont masquées par défaut : choisissez l’origine « Requêtes au serveur » pour les voir ;
 - la case « Problèmes seulement », pour ne garder que les avertissements et les erreurs ;
 - une recherche (« OpenAI, microphone, interaction… ») ;
 - « Pause » pour figer la liste pendant la lecture, puis « Reprendre » ;
 - **Exporter le journal filtré**, qui télécharge les événements affichés dans un fichier `cornelius-journal.jsonl`. L’export marche même quand le serveur ne répond plus.
+
+Chaque action de Cornelius apparaît avec l’origine « Outils » : Home Assistant, commandes HTTP, agents, modules, vision, images. La ligne donne le nom de l’outil, son résultat et sa durée. Un échec ou un refus est un avertissement.
+
+Pour Home Assistant, l’origine « Home Assistant » ajoute le détail : l’action demandée, l’appareil, la luminosité, la raison d’un refus, puis chaque requête envoyée à Home Assistant (méthode, chemin, code de réponse, durée). L’adresse et le jeton n’y figurent jamais. Les paroles de l’utilisateur et les paramètres des agents, de la mémoire, de la vision et des modules ne sont pas écrits.
 
 Une copie est aussi écrite sur le disque, dans `data/logs/cornelius.log`. Au-delà de 5 Mo, le fichier est archivé en `cornelius.log.1`, `.2` puis `.3` : les démarrages précédents restent consultables.
 

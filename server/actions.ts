@@ -366,6 +366,7 @@ export class ActionExecutor {
           actionRef: action.ref,
           status: 'unknown',
           responseStatus: response.status,
+          durationMs: this.now() - startedAt,
         });
         return {
           schemaVersion: 1,
@@ -396,6 +397,7 @@ export class ActionExecutor {
         actionRef: action.ref,
         status: 'failed',
         responseStatus: response.status,
+        durationMs: this.now() - startedAt,
       });
       return {
         schemaVersion: 1,
@@ -424,6 +426,7 @@ export class ActionExecutor {
           actionRef: action.ref,
           status: 'failed',
           code,
+          durationMs: this.now() - startedAt,
         });
         return {
           schemaVersion: 1,
@@ -445,6 +448,7 @@ export class ActionExecutor {
         status: 'unknown',
         code,
         timeout: code === 'timeout',
+        durationMs: this.now() - startedAt,
       });
       return {
         schemaVersion: 1,
