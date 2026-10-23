@@ -188,6 +188,32 @@ test('un appareil qui remonte son état en différé est quand même confirmé',
   assert.equal(result.result?.confirmed, true, result.summary);
   assert.match(result.summary, /confirmé par Home Assistant/);
   assert.ok(Date.now() - started >= 500);
+  const reads = f.logs
+    .snapshot()
+    .entries.filter((entry) => entry.details.path === '/api/states/light.salon');
+  assert.ok(reads.length <= 2, 'une lecture avant, une après la commande, pas une par sondage');
+});
+
+test('le journal ne copie que les champs valides, et masque le jeton', async (t) => {
+  const f = await fixture(t);
+  f.select();
+  const rejected = await f.home.run(
+    {
+      entityIds: ['light.salon', 'private user text'],
+      action: 'secret action',
+      brightnessPct: { message: 'private user text' },
+    },
+    signal(),
+  );
+  assert.equal(rejected.error?.code, 'invalid_params');
+  const entry = f.logs.snapshot().entries.find((item) => item.event === 'Appel Home Assistant');
+  assert.equal(entry?.details.reason, 'invalid_params');
+  assert.deepEqual(entry?.details.entityIds, ['light.salon']);
+  assert.equal(entry?.details.action, undefined);
+  assert.equal(entry?.details.data, undefined);
+  assert.ok(!JSON.stringify(f.logs.snapshot().entries).includes('private user text'));
+  f.logs.write('info', 'local', 'Fuite', { message: 'oops ' + f.fake.token });
+  assert.ok(!JSON.stringify(f.logs.snapshot().entries).includes(f.fake.token));
 });
 
 test('un accusé HTTP ne devient jamais une confirmation fictive', async (t) => {
@@ -367,6 +393,8 @@ test('capteurs : lecture seule, échéance et durée calculées par le serveur, 
 
   const timer = await read('timer.four');
   assert.equal(timer.status, 'succeeded');
+  const logged = f.logs.snapshot().entries.find((e) => e.event === 'Appel Home Assistant');
+  assert.deepEqual(logged?.details.entityIds, ['timer.four']);
   const timerResult = timer.result as { remainingMinutes: number; endsAtLocal: string };
   assert.ok([12, 13].includes(timerResult.remainingMinutes));
   assert.match(timerResult.endsAtLocal, /^\d{2}:\d{2}$/u);
@@ -658,6 +686,70 @@ test('une commande sur toute la zone allume chaque appareil, et rapporte l’ind
   assert.match(result.summary, /3 appareil\(s\) sur 4.*Yeelight 2/);
   const call = f.logs.snapshot().entries.find((entry) => entry.event === 'Appel Home Assistant');
   assert.deepEqual(call?.details.entityIds, f.desk);
+});
+
+test('un lot annulé ne se présente jamais comme accepté', async (t) => {
+  const f = await deskFixture(t);
+  const abort = new AbortController();
+  abort.abort();
+  const result = await f.home.run(
+    {
+      entityIds: ['light.bureau_3_ok', 'light.lampe_bureau'],
+      action: 'turn_on',
+      brightnessPct: null,
+    },
+    abort.signal,
+  );
+  assert.equal(validators.toolResult(result), true, JSON.stringify(validators.toolResult.errors));
+  assert.equal(result.status, 'cancelled');
+  assert.doesNotMatch(result.summary, /accepté|confirmé/);
+  assert.match(result.summary, /0 appareil\(s\) sur 2.*Bureau 3.*annulée/);
+  assert.equal(result.result?.accepted, false);
+  assert.equal(f.fake.calls.length, 0);
+});
+
+test('une pièce de plus de 16 appareils se commande en un seul appel', async (t) => {
+  const f = await deskFixture(t);
+  const ids = Array.from({ length: 40 }, (_, i) => 'light.grande_' + i);
+  for (const id of ids) f.fake.states.set(id, haState(id, 'off'));
+  await f.home.refresh();
+  f.select(ids);
+  const result = await f.home.run(
+    { entityIds: ids, action: 'turn_on', brightnessPct: null },
+    signal(),
+  );
+  assert.equal(result.status, 'succeeded', result.summary);
+  assert.equal(f.fake.calls.length, 40);
+});
+
+test('beaucoup d’échecs : le résumé et le message d’erreur respectent le schéma', async (t) => {
+  const f = await deskFixture(t);
+  const ids = Array.from({ length: 40 }, (_, i) => 'light.panne_' + i);
+  for (const id of ids) {
+    const entity = haState(id, 'unavailable');
+    entity.attributes.friendly_name = 'Lampe très longue avec un nom de pièce détaillé ' + id;
+    f.fake.states.set(id, entity);
+  }
+  await f.home.refresh();
+  f.select(ids);
+  const result = await f.home.run(
+    { entityIds: ids, action: 'turn_on', brightnessPct: null },
+    signal(),
+  );
+  assert.equal(result.status, 'failed');
+  assert.ok(result.summary.length <= 500);
+  assert.match(result.summary, /et \d+ autre\(s\)\.$/);
+  assert.ok((result.error?.message.length ?? 0) <= 300);
+  assert.equal(validators.toolResult(result), true, JSON.stringify(validators.toolResult.errors));
+});
+
+test('si la lecture des zones échoue au rafraîchissement, les zones connues restent', async (t) => {
+  const f = await deskFixture(t);
+  const area = () => f.home.view().entities.find((e) => e.id === 'light.bureau_3_ok')?.area;
+  assert.equal(area(), 'Bureau');
+  f.fake.options.areasDenied = true;
+  await f.home.refresh();
+  assert.equal(area(), 'Bureau');
 });
 
 test('un identifiant non autorisé dans la liste refuse tout l’appel sans effet', async (t) => {

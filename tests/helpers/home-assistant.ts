@@ -46,6 +46,7 @@ export async function fakeHomeAssistant() {
     readStatus: 200,
     assistDenied: false,
     aliasBatchDenied: false,
+    areasDenied: false,
     malformed: false,
     holdRead: false,
   };
@@ -139,6 +140,17 @@ export async function fakeHomeAssistant() {
                 ...entityLinks.get(request.entity_id),
               }
             : null;
+      if (request.type === 'config/area_registry/list' && options.areasDenied) {
+        socket.send(
+          JSON.stringify({
+            id: request.id,
+            type: 'result',
+            success: false,
+            error: { code: 'unknown_error', message: 'Registry unavailable' },
+          }),
+        );
+        return;
+      }
       if (request.type === 'config/area_registry/list') result = areas;
       if (request.type === 'config/device_registry/list') result = devices;
       if (request.type === 'homeassistant/expose_entity/list') {

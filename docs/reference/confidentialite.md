@@ -51,7 +51,7 @@ Les conversations sont ouvertes avec l’option `store: false` d’OpenAI, qui d
 - **Météo** et **Transports** interrogent leur fournisseur (Météo Concept, Île-de-France Mobilités) avec le lieu ou l’arrêt réglé dans la source, et leur jeton.
 - **Les commandes** (**Modules → Commandes HTTP**) envoient leur requête à l’adresse que vous avez saisie.
 - **Home Assistant** reçoit les commandes des appareils autorisés, à l’adresse de votre installation.
-- **Les agents** (Hermes) reçoivent la demande confiée par la personne reconnue, à l’adresse de votre agent.
+- **Les agents** (Hermes) reçoivent la demande confiée par la personne reconnue, à l’adresse de votre agent. Avec un profil par défaut ou choisi dans l’administration, toute personne seule devant le miroir peut leur confier une demande, et n’importe qui sans caméra.
 - **Les modèles** sont téléchargés depuis leurs sites (GitHub, Hugging Face) lors de leur installation.
 
 ## Les données enregistrées

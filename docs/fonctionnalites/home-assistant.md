@@ -95,6 +95,7 @@ En cas de coupure, Cornelius se reconnecte seul, en espaçant les essais de 1 à
 ## Le jeton et les données
 
 - Le jeton est enregistré sur l’ordinateur du miroir, dans la base de Cornelius (`data/cornelius.sqlite` par défaut). Il n’y est **pas chiffré**. Les copies de la base faites avant une mise à jour peuvent aussi le contenir.
+- Les noms, les alias et les zones des appareils autorisés sont envoyés au modèle, avec la liste de leurs identifiants. Choisissez des noms que vous acceptez de partager.
 - Il n’est jamais renvoyé au navigateur, à la conversation ni au journal. Le champ **Jeton longue durée** affiche seulement « Jeton enregistré (masqué) ».
 - Laissez le champ vide pour garder le jeton enregistré. Ce n’est possible qu’à la même adresse : une nouvelle adresse demande un nouveau jeton.
 - Changer d’adresse ou de jeton vide la sélection et retire l’autorisation de Cornelius, jusqu’à un nouvel enregistrement.
