@@ -244,6 +244,11 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ enabled }),
     }),
+  defaultProfile: (profileId: string | null) =>
+    request<StateEvent>('/api/admin/default-profile', {
+      method: 'PATCH',
+      body: JSON.stringify({ profileId }),
+    }),
   auth: (role: Role) => request<{ role: Role | null }>(`/api/auth?role=${role}`),
   login: (password: string) => post<{ role: Role }>('/api/login', { password }),
   logout: () => post<void>('/api/logout', {}),

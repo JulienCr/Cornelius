@@ -458,7 +458,7 @@ export function adminBlockers(
   }
   if (state.privacyMode && state.presence.peopleCount > 1)
     add('privacy', 'Mode vie privée : plusieurs personnes sont présentes.');
-  if (state.session.mode === 2 && !state.activeProfile)
+  if (state.session.mode === 2 && (!state.activeProfile || state.selection === 'default'))
     add('recognition', 'En attente d’une personne reconnue.');
   else if (state.session.mode === 3 && state.presence.state !== 'engaged')
     add('engagement', 'En attente d’une personne qui regarde le miroir.');

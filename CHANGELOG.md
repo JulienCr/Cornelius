@@ -6,6 +6,12 @@ Le fonctionnement actuel est décrit dans la [documentation](docs/README.md). Ce
 
 ## Non publié
 
+### 2026-10-23 : profil par défaut
+
+**Ajouté**
+
+- Réglage « Conversations au nom de » dans l’administration : sans personne reconnue, la conversation se déroule au nom de ce profil plutôt que du foyer. Une personne reconnue le remplace, plusieurs personnes ramènent au foyer. Voir [Le miroir](docs/utilisation/miroir.md#profil-par-défaut).
+
 ### 2026-10-22 : vision GPU protégée contre un plantage CUDA
 
 **Corrigé**

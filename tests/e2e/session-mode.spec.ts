@@ -74,6 +74,7 @@ test('« Quand il écoute » range ses cartes dans l’ordre, les réglages avan
     'Ouverture de la conversation',
     'Fin de parole',
     'Mode vie privée',
+    'Profil par défaut',
     'Accueil à l’ouverture',
     'Son d’ouverture',
     // Dans le repli « Réglages avancés » : trois cartes du même style que les autres.

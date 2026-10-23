@@ -1781,3 +1781,160 @@ test('fin de parole : un seul délai, toujours actif quand la caméra est étein
   f.advance(1);
   assert.equal(f.state().session.phase, 'closing');
 });
+
+test('profil par défaut : appliqué au démarrage et après une conversation en mode voix, sans caméra', (t) => {
+  const f = voiceFixture(t, false);
+  assert.equal(f.state().selection, 'household');
+  f.controller.setDefaultProfileId(f.alice.id);
+  assert.equal(f.state().defaultProfileId, f.alice.id);
+  assert.equal(f.state().activeProfile?.id, f.alice.id);
+  assert.equal(f.state().selection, 'default');
+  assert.equal(f.controller.memoryProfileId(), f.alice.id);
+  assert.equal(f.controller.wakeDetected(), true);
+  f.ready();
+  f.controller.close('Fin de test.');
+  f.acknowledgeClose();
+  assert.equal(f.state().activeProfile?.id, f.alice.id);
+  assert.equal(f.state().selection, 'default');
+  // Le réglage survit au redémarrage du serveur.
+  const restarted = new SessionController(
+    f.profiles,
+    new Transport(),
+    f.clock,
+    new SessionPreferences(f.db),
+  );
+  assert.equal(restarted.snapshot().state.activeProfile?.id, f.alice.id);
+  assert.equal(restarted.snapshot().state.selection, 'default');
+  // Revenir au foyer s'applique tout de suite.
+  f.controller.setDefaultProfileId(null);
+  assert.equal(f.state().activeProfile, null);
+  assert.equal(f.state().selection, 'household');
+  assert.throws(() => f.controller.setDefaultProfileId('missing'));
+});
+
+test('profil par défaut : un inconnu seul en bénéficie, plusieurs personnes reviennent au foyer', (t) => {
+  const f = fixture(t);
+  f.controller.setDefaultProfileId(f.bob.id);
+  f.engage([null]);
+  assert.equal(f.state().activeProfile?.id, f.bob.id);
+  assert.equal(f.state().selection, 'default');
+  f.observe({
+    people: [
+      { trackId: 'a', profileId: null },
+      { trackId: 'b', profileId: null },
+    ],
+  });
+  f.advance(1000);
+  assert.equal(f.state().activeProfile, null);
+  assert.equal(f.state().selection, 'household');
+  assert.equal(f.controller.memoryProfileId(), null);
+  f.observe({ people: [{ trackId: 'a', profileId: null }] });
+  f.advance(1000);
+  assert.equal(f.state().activeProfile?.id, f.bob.id);
+  assert.equal(f.state().selection, 'default');
+  // Le départ ramène au profil par défaut, pas au foyer.
+  f.observe({ presence: false, engaged: false, people: [] });
+  f.advance(8000);
+  assert.equal(f.state().activeProfile?.id, f.bob.id);
+  assert.equal(f.state().selection, 'default');
+});
+
+test('profil par défaut : la reconnaissance l’emporte, sans redémarrage pour la personne par défaut', (t) => {
+  const f = fixture(t);
+  f.controller.setDefaultProfileId(f.bob.id);
+  f.engage([null]);
+  f.ready();
+  const epoch = f.state().session.profileEpoch;
+  f.observe({ people: [{ trackId: 'person-0', profileId: f.bob.id }] });
+  f.advance(1000);
+  assert.equal(f.state().selection, 'automatic');
+  assert.equal(f.state().activeProfile?.id, f.bob.id);
+  assert.equal(f.state().session.profileEpoch, epoch);
+  assert.deepEqual(f.transport.closed, []);
+
+  const other = fixture(t);
+  other.controller.setDefaultProfileId(other.bob.id);
+  other.engage([null]);
+  other.ready();
+  other.observe({ people: [{ trackId: 'person-0', profileId: other.alice.id }] });
+  other.advance(1000);
+  assert.equal(other.state().selection, 'automatic');
+  assert.equal(other.state().activeProfile?.id, other.alice.id);
+  assert.equal(other.transport.closed.length, 1);
+});
+
+test('profil par défaut en mode voix : la personne reconnue le remplace et la conversation reprend', (t) => {
+  const f = voiceFixture(t);
+  f.controller.setDefaultProfileId(f.bob.id);
+  assert.equal(f.controller.wakeDetected(), true);
+  f.ready();
+  f.see([f.alice.id]);
+  assert.equal(f.state().activeProfile?.id, f.alice.id);
+  assert.equal(f.state().selection, 'automatic');
+  f.acknowledgeClose();
+  assert.equal(f.transport.opened.length, 2);
+  assert.equal(f.state().activeProfile?.id, f.alice.id);
+});
+
+test('profil par défaut en mode voix : plusieurs personnes ramènent au foyer', (t) => {
+  const f = voiceFixture(t);
+  f.controller.setDefaultProfileId(f.bob.id);
+  assert.equal(f.controller.wakeDetected(), true);
+  f.ready();
+  assert.equal(f.state().selection, 'default');
+  f.see([null, null]);
+  assert.equal(f.state().selection, 'default');
+  f.see([null, null]);
+  assert.equal(f.state().selection, 'household');
+  assert.equal(f.state().activeProfile, null);
+  assert.equal(f.transport.closed.length, 1);
+  f.acknowledgeClose();
+  assert.equal(f.state().selection, 'household');
+  assert.equal(f.state().activeProfile, null);
+});
+
+test('profil par défaut : le mode identification et les personnes reconnues exigent toujours un visage reconnu', (t) => {
+  const f = fixture(t);
+  f.controller.setSessionMode(2);
+  f.controller.setDefaultProfileId(f.alice.id);
+  f.observe({ presence: true, engaged: false, people: [{ trackId: 'x', profileId: null }] });
+  f.advance(2000);
+  assert.equal(f.transport.opened.length, 0);
+  f.observe({ people: [{ trackId: 'x', profileId: f.bob.id }] });
+  f.advance(800);
+  assert.equal(f.transport.opened.length, 1);
+  assert.equal(f.state().activeProfile?.id, f.bob.id);
+
+  const known = fixture(t);
+  known.controller.setDefaultProfileId(known.alice.id);
+  known.controller.setKnownPeopleOnly(true);
+  known.engage([null]);
+  known.advance(2000);
+  assert.equal(known.transport.opened.length, 0);
+  assert.match(known.state().diagnostic ?? '', /non reconnue/);
+});
+
+test('profil par défaut : un choix explicite n’est pas écrasé, un réglage ultérieur est seulement enregistré', (t) => {
+  const f = fixture(t);
+  f.controller.setDefaultProfileId(f.alice.id);
+  f.controller.command({ type: 'select_profile', profileId: f.bob.id });
+  f.observe({ people: [{ trackId: 'x', profileId: null }] });
+  f.advance(1000);
+  assert.equal(f.state().activeProfile?.id, f.bob.id);
+  assert.equal(f.state().selection, 'explicit');
+  f.controller.setDefaultProfileId(null);
+  assert.equal(f.state().activeProfile?.id, f.bob.id);
+  assert.equal(new SessionPreferences(f.db).getDefaultProfileId(), null);
+});
+
+test('profil par défaut : supprimer ce profil revient au foyer', (t) => {
+  const f = fixture(t);
+  f.controller.setDefaultProfileId(f.alice.id);
+  assert.equal(f.state().activeProfile?.id, f.alice.id);
+  f.profiles.delete(f.alice.id);
+  f.controller.profilesChanged();
+  assert.equal(f.state().defaultProfileId, null);
+  assert.equal(f.state().activeProfile, null);
+  assert.equal(f.state().selection, 'household');
+  assert.equal(new SessionPreferences(f.db).getDefaultProfileId(), null);
+});

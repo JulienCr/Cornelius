@@ -464,6 +464,10 @@ test('l’administration garde la priorité et les conditions de démarrage de S
     'privacy',
   ]);
   assert.deepEqual(ids(mirror(presenceMembers, { activeProfile: null })), ['recognition']);
+  assert.deepEqual(
+    ids(mirror(presenceMembers, { selection: 'default', defaultProfileId: profile.id })),
+    ['recognition'],
+  );
   assert.deepEqual(ids(mirror(gaze, { presence: { state: 'present' } })), ['engagement']);
   assert.deepEqual(
     ids(

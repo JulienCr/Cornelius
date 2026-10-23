@@ -110,7 +110,8 @@ L’enregistrement d’un visage demande le service caméra. Quel que soit le mo
   Un résumé dit ce que fait Cornelius et si la caméra reste allumée en veille. Un avertissement apparaît quand le choix ne peut pas fonctionner aujourd’hui (service caméra arrêté, mot d’appel pas prêt, aucun visage mémorisé). Voir [Ouverture et présence](../fonctionnalites/ouverture-et-presence.md) et [Le mot d’appel](../fonctionnalites/mot-d-appel.md).
 - **Fin de parole** : « Fermer après un silence de » « Jamais » (par défaut), 10 s, 20 s, 30 s, 1 min, 2 min ou 5 min, même si la personne reste devant le miroir. Un autre délai, de 3 à 300 s, se règle dans « Réglage fin ». Avec « Cornelius » pour tout le monde, « Jamais » n’est pas disponible : la présence ne termine pas la conversation dans ce mode.
 - **Mode vie privée** (désactivé par défaut) : dès qu’une deuxième personne est détectée, la conversation se ferme et aucune ne s’ouvre tant qu’il y a du monde. Voir [Le miroir](miroir.md#plusieurs-personnes-et-vie-privée).
-- **Accueil à l’ouverture** : ce que Cornelius dit en premier quand il reconnaît la personne. « « Bonjour » et le prénom » (par défaut), « Accueil libre » (dans le ton choisi dans « Personnaliser Cornelius ») ou « Pas d’accueil ». Sans personne reconnue, il ne salue jamais.
+- **Profil par défaut** (« Conversations au nom de », « Le foyer » par défaut) : le profil au nom duquel se déroulent les conversations quand personne n’est reconnu, par exemple sans caméra. Une personne reconnue par la caméra reste prioritaire. Voir [Le miroir](miroir.md#profil-par-défaut).
+- **Accueil à l’ouverture** : ce que Cornelius dit en premier quand il reconnaît la personne. « « Bonjour » et le prénom » (par défaut), « Accueil libre » (dans le ton choisi dans « Personnaliser Cornelius ») ou « Pas d’accueil ». Sans personne reconnue, il ne salue jamais, sauf le profil par défaut, salué par son prénom.
 - **Son d’ouverture** : « Aucun son » (par défaut), ou « Carillon », « Goutte », « Cristal », « Bulle », « Cloche », « Souffle ». Le son choisi est joué une fois pour l’écouter. Le miroir ne le joue qu’après l’activation de la voix.
 - **Réglages avancés** (replié) :
   - **Micro gardé prêt** (bêta) : « Garder le micro prêt » (désactivé par défaut) permet de dire « Cornelius, allume la lumière » d’une traite. Le micro reste prêt sur cet ordinateur ; le son n’est envoyé qu’une fois la conversation ouverte ;
@@ -177,7 +178,7 @@ Un badge résume l’état : « À configurer », « Désactivé », « Connexio
 - **Mémoire de …** : l’interrupteur « Autoriser la mémoire », la recherche « Rechercher un souvenir », la liste des souvenirs (« Sujet », « Souvenir », « Durée », « Expiration ») avec « Oublier » pour chacun et « Tout oublier ».
 - **Ce que Cornelius a retenu récemment** : le résultat de l’analyse après chaque conversation. Le texte de la conversation n’est pas conservé.
 
-Les souvenirs ne sont retenus qu’après une conversation avec une seule personne, reconnue par la caméra. Voir [La mémoire](../fonctionnalites/memoire.md).
+Les souvenirs ne sont retenus qu’après une conversation avec une seule personne, reconnue par la caméra. Les conversations tenues au nom du profil par défaut sont aussi retenues. Voir [La mémoire](../fonctionnalites/memoire.md).
 
 ## État du système
 

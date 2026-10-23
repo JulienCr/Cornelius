@@ -20,6 +20,7 @@ function fixture(
     delegationMode?: DelegationMode;
     integrations?: ConstructorParameters<typeof LiveTransport>[3];
     voiceRecognition?: boolean;
+    defaultProfileName?: string;
   } = {},
 ) {
   const db = openDatabase(':memory:');
@@ -44,6 +45,10 @@ function fixture(
   if (options.mode) preferences.setSessionMode(options.mode);
   if (options.delegationMode) preferences.setDelegationMode(options.delegationMode);
   if (options.voiceRecognition) preferences.setVoiceRecognition(true);
+  const defaultProfile = options.defaultProfileName
+    ? profiles.create(options.defaultProfileName)
+    : null;
+  if (defaultProfile) preferences.setDefaultProfileId(defaultProfile.id);
   const logs = new DiagnosticLog();
   const live = new LiveTransport(
     gateway,
@@ -1737,4 +1742,64 @@ test('mode voix : le prénom reconnu au mot d’appel devient un contexte, sans 
   assert.ok(!appends.some((event) => event.content.includes('Bonjour')));
   assert.ok(!f.sent.some((event) => event.type === 'session.commentary.append'));
   assert.equal(f.controller.snapshot().state.session.phase, 'ready');
+});
+
+test('profil par défaut : Home Assistant réservé ne le compte pas comme une personne reconnue', async (t) => {
+  const recognizedCalls: boolean[] = [];
+  const homeAssistant = {
+    tools: () => [],
+    handles: (name: string) => name === 'home_assistant__control',
+    run: async (_args: unknown, _signal: AbortSignal, _name?: string, recognized = true) => {
+      recognizedCalls.push(recognized);
+      return {
+        schemaVersion: 1 as const,
+        status: 'failed' as const,
+        result: null,
+        snapshotId: null,
+        actionRunId: null,
+        summary: 'Réservé.',
+        error: { code: 'forbidden', message: 'Réservé.', retryable: false },
+      };
+    },
+  };
+  const f = fixture(t, { mode: 1, integrations: { homeAssistant }, defaultProfileName: 'Zoe' });
+  await f.ready();
+  assert.equal(f.controller.snapshot().state.selection, 'default');
+  const call = (id: string) =>
+    f.emit({
+      type: 'response.event',
+      delegation_id: 'maison',
+      event: {
+        type: 'response.output_item.done',
+        response_id: 'r1',
+        item: {
+          type: 'function_call',
+          call_id: id,
+          name: 'home_assistant__control',
+          arguments: '{}',
+        },
+      },
+    });
+  call('c1');
+  await setImmediate();
+  assert.deepEqual(recognizedCalls, [false]);
+  assert.equal(f.controller.recognizedPersonActive(), false);
+  f.recognize(f.profiles.create('Alice').id);
+  assert.equal(f.controller.recognizedPersonActive(), true);
+});
+
+test('mode voix : le profil par défaut n’est pas annoncé comme reconnu par la caméra', async (t) => {
+  const f = fixture(t, {
+    mode: 4,
+    voiceRecognition: true,
+    defaultProfileName: 'Zoe',
+    integrations: { personality: () => ({ household: '', personal: '', personalContext: '' }) },
+  });
+  await f.ready();
+  assert.equal(f.controller.snapshot().state.selection, 'default');
+  const appends = f.sent.filter((event) => event.type === 'session.instructions.append');
+  const identity = appends.find((event) => event.content.includes('"Zoe"'));
+  assert.ok(identity);
+  assert.match(identity.content, /Profil par défaut, personne non reconnue par la caméra/);
+  assert.doesNotMatch(identity.content, /^Personne reconnue/);
 });
