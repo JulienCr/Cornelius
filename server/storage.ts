@@ -36,6 +36,7 @@ import { addonRefsMigration } from './addons/migrations.js';
 import { adminPasswordMigration } from './admin-password.js';
 import { secretsMigration } from './secrets.js';
 import { trustedDevicesMigration } from './trusted-devices.js';
+import { adminSessionsMigration } from './admin-sessions.js';
 import { satellitesMigration } from './satellites-store.js';
 import { rotateMigrationBackups } from './backups.js';
 
@@ -377,6 +378,8 @@ export const migrations: readonly string[] = [
     profile_id TEXT REFERENCES profiles(id) ON DELETE SET NULL
   ) STRICT;
   INSERT OR IGNORE INTO default_profile (id) VALUES (1);`,
+  // Admin sessions kept across restarts (token hash only).
+  adminSessionsMigration,
 ];
 
 /** The server owns this connection. Backups include WAL changes via SQLite itself. */

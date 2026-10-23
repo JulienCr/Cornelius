@@ -81,7 +81,7 @@ export function App() {
         setAuthenticated(false);
       }}
       onAuthenticationExpired={() => {
-        setError('Votre session a expiré ou le serveur a redémarré. Reconnectez cet espace.');
+        setError('Votre session a expiré. Reconnectez cet espace.');
         setAuthenticated(false);
       }}
     />
