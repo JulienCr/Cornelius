@@ -6,6 +6,12 @@ Le fonctionnement actuel est décrit dans la [documentation](docs/README.md). Ce
 
 ## Non publié
 
+### 2026-10-23 : profil par défaut sans détour
+
+**Modifié**
+
+- Cornelius s’adresse au profil par défaut comme à cette personne, sans préciser qu’elle n’est pas reconnue. Ses agents (Hermes) répondent sans caméra. Voir [Le miroir](docs/utilisation/miroir.md#profil-par-défaut).
+
 ### 2026-10-23 : sessions d’administration durables
 
 **Modifié**

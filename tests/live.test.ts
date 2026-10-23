@@ -1800,6 +1800,52 @@ test('mode voix : le profil par défaut n’est pas annoncé comme reconnu par l
   const appends = f.sent.filter((event) => event.type === 'session.instructions.append');
   const identity = appends.find((event) => event.content.includes('"Zoe"'));
   assert.ok(identity);
-  assert.match(identity.content, /Profil par défaut, personne non reconnue par la caméra/);
-  assert.doesNotMatch(identity.content, /^Personne reconnue/);
+  assert.match(identity.content, /^Tu parles avec .*"Zoe"/);
+  assert.doesNotMatch(identity.content, /défaut|reconnue/);
+});
+
+test('Hermes Live : le profil par défaut accède à ses agents sans caméra', async (t) => {
+  let input: Parameters<import('../server/agents.js').Agents['run']>[0] | undefined;
+  const f = fixture(t, {
+    mode: 4,
+    defaultProfileName: 'Zoe',
+    integrations: {
+      agents: {
+        tools: () => [],
+        handles: (name) => name.startsWith('agents__'),
+        run: async (value) => {
+          input = value;
+          return {
+            schemaVersion: 1,
+            status: 'succeeded',
+            result: { taskId: 'zoe-task', output: 'ok' },
+            snapshotId: null,
+            actionRunId: null,
+            summary: 'ok',
+            error: null,
+          };
+        },
+        received: () => {},
+      },
+    },
+  });
+  await f.ready();
+  const zoe = f.controller.snapshot().state.activeProfile!;
+  assert.equal(f.controller.snapshot().state.selection, 'default');
+  f.emit({
+    type: 'response.event',
+    delegation_id: 'zoe-delegation',
+    event: {
+      type: 'response.output_item.done',
+      item: {
+        type: 'function_call',
+        call_id: 'zoe-call',
+        name: 'agents__start',
+        arguments: JSON.stringify({ message: 'Demande Zoe' }),
+      },
+    },
+  });
+  await new Promise((done) => setTimeout(done, 0));
+  assert.equal(input?.profileId, zoe.id);
+  assert.ok(!JSON.stringify(f.sent).includes('seule et reconnue'));
 });
