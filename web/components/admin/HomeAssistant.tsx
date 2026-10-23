@@ -140,7 +140,15 @@ export function HomeAssistantSettings({
       (entity) =>
         (!selectedOnly || selected.includes(entity.id)) &&
         (kind === 'all' || (kind === 'devices') === isControllable(entity)) &&
-        (entity.name + ' ' + entity.id + ' ' + (entity.aliases ?? []).join(' '))
+        (
+          entity.name +
+          ' ' +
+          entity.id +
+          ' ' +
+          (entity.area ?? '') +
+          ' ' +
+          (entity.aliases ?? []).join(' ')
+        )
           .toLocaleLowerCase('fr')
           .includes(search.toLocaleLowerCase('fr')),
     ) ?? [];
@@ -401,6 +409,11 @@ export function HomeAssistantSettings({
                   />
                   <span className="min-w-0">
                     <span className="block text-sm font-medium">{entity.name}</span>
+                    {!!entity.area && (
+                      <span className="block text-xs text-muted-foreground">
+                        Zone : {entity.area}
+                      </span>
+                    )}
                     {!!entity.aliases?.length && (
                       <span className="block text-xs text-muted-foreground">
                         Autres noms : {entity.aliases.join(', ')}
@@ -437,7 +450,7 @@ export function HomeAssistantSettings({
                             ' » : commande envoyée.',
                           async () => {
                             const result = await api.controlHomeAssistant({
-                              entityId: entity.id,
+                              entityIds: [entity.id],
                               action,
                               brightnessPct: null,
                             });

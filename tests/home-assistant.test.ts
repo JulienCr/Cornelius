@@ -35,7 +35,7 @@ const command = (
   entityId = 'light.salon',
   action = 'turn_on',
   brightnessPct: number | null = null,
-) => ({ entityId, action, brightnessPct });
+) => ({ entityIds: [entityId], action, brightnessPct });
 const signal = () => new AbortController().signal;
 async function until(predicate: () => boolean) {
   for (let i = 0; i < 100; i++) {
@@ -133,7 +133,11 @@ test('refuse les entités, domaines, actions et paramètres non autorisés sans 
     command('light.salon', 'turn_on', 101),
     command('light.salon', 'turn_on', 0),
     { ...command(), service: 'lock.unlock' },
-    { ...command(), entityId: ['light.salon'] },
+    { ...command(), entityIds: 'light.salon' },
+    { ...command(), entityIds: [] },
+    { ...command(), entityIds: ['light.salon', 'light.salon'] },
+    { ...command(), entityIds: Array.from({ length: 17 }, (_, i) => 'light.l' + i) },
+    { ...command(), entityId: 'light.salon' },
     command('switch.bureau', 'turn_on', 50),
     command('light.salon', 'turn_off', 50),
   ])
@@ -167,8 +171,8 @@ test('commande précise, luminosité et retour confirmé par un état réel', as
   assert.equal(typeof rest?.details.durationMs, 'number');
   const call = entries.find((entry) => entry.event === 'Appel Home Assistant');
   assert.deepEqual(
-    [call?.details.action, call?.details.entityId, call?.details.data, call?.details.status],
-    ['turn_on', 'light.salon', { brightness_pct: 40 }, 'succeeded'],
+    [call?.details.action, call?.details.entityIds, call?.details.data, call?.details.status],
+    ['turn_on', ['light.salon'], { brightness_pct: 40 }, 'succeeded'],
   );
   const journal = JSON.stringify(f.logs.snapshot().entries);
   assert.ok(!journal.includes(f.fake.token));
@@ -389,7 +393,7 @@ test('capteurs : lecture seule, échéance et durée calculées par le serveur, 
   assert.equal((await read('light.salon')).error?.code, 'forbidden');
   assert.equal((await read('lock.porte')).error?.code, 'forbidden');
   const command = await f.home.run(
-    { entityId: 'timer.four', action: 'turn_off', brightnessPct: null },
+    { entityIds: ['timer.four'], action: 'turn_off', brightnessPct: null },
     signal(),
   );
   assert.equal(command.error?.code, 'invalid_params');
@@ -539,4 +543,157 @@ test('adresse injoignable et coupure en cours d’utilisation ont chacune leur m
   // Les nouveaux essais échouent aussi, sans mettre l’adresse en cause.
   await delay(1_300);
   assert.equal(home.view().error, HOME_ASSISTANT_CUT);
+});
+
+// Area "Bureau": two lights by the device area, one by its own area (overriding the device),
+// one dimmable light, plus a light of another area.
+async function deskFixture(t: TestContext) {
+  const f = await fixture(t);
+  const light = (id: string, name: string, brightness = false, state = 'off') => {
+    const entity = haState(id, state, brightness);
+    entity.attributes.friendly_name = name;
+    f.fake.states.set(id, entity);
+  };
+  light('light.yeelight_color_3', 'Bureau 2', true);
+  light('light.bureau_3_ok', 'Bureau 3');
+  light('light.yeelight_2', 'Yeelight 2');
+  light('light.lampe_bureau', 'Lampe Bureau');
+  f.fake.areas.push({ area_id: 'bureau', name: 'Bureau' }, { area_id: 'salon', name: 'Salon' });
+  f.fake.devices.push({ id: 'dev_a', area_id: 'bureau' }, { id: 'dev_b', area_id: 'salon' });
+  f.fake.entityLinks.set('light.yeelight_color_3', { device_id: 'dev_a' });
+  f.fake.entityLinks.set('light.bureau_3_ok', { device_id: 'dev_a' });
+  f.fake.entityLinks.set('light.yeelight_2', { device_id: 'dev_b', area_id: 'bureau' });
+  f.fake.entityLinks.set('light.lampe_bureau', { area_id: 'bureau' });
+  f.fake.entityLinks.set('light.salon', { device_id: 'dev_b' });
+  await f.home.refresh();
+  const desk = [
+    'light.yeelight_color_3',
+    'light.bureau_3_ok',
+    'light.yeelight_2',
+    'light.lampe_bureau',
+  ];
+  f.select([...desk, 'light.salon']);
+  return { ...f, desk };
+}
+
+test('zones : l’entité prime sur son appareil, et la zone figure dans la description', async (t) => {
+  const f = await deskFixture(t);
+  const area = (id: string) => f.home.view().entities.find((e) => e.id === id)?.area;
+  assert.equal(area('light.yeelight_color_3'), 'Bureau');
+  assert.equal(area('light.yeelight_2'), 'Bureau');
+  assert.equal(area('light.lampe_bureau'), 'Bureau');
+  assert.equal(area('light.salon'), 'Salon');
+  assert.equal(area('switch.bureau'), undefined);
+  const description = f.home.tools()[0]!.description;
+  assert.ok(
+    description.includes(
+      '{"id":"light.yeelight_color_3","name":"Bureau 2","aliases":[],"area":"Bureau","brightness":true}',
+    ),
+  );
+  assert.ok(
+    description.includes('"id":"light.bureau_3_ok","name":"Bureau 3","aliases":[],"area":"Bureau"'),
+  );
+  const stored = f.repository.get().catalog.find((e) => e.id === 'light.lampe_bureau');
+  assert.equal(stored?.area, 'Bureau');
+  // Une entité sans zone n’a pas de champ area dans la description.
+  f.select(['switch.bureau']);
+  assert.ok(!f.home.tools()[0]!.description.includes('"area"'));
+});
+
+test('zones : un ancien catalogue sans zone se charge, un changement de zone est suivi', async (t) => {
+  const f = await deskFixture(t);
+  const legacy = f.repository.get().catalog.map(({ area: _area, ...entity }) => entity);
+  f.repository.save({ ...f.repository.get(), catalog: legacy });
+  const restored = new HomeAssistant(f.repository, createHttpClient());
+  assert.equal(restored.view().entities.length, legacy.length);
+  assert.equal(restored.view().entities.find((e) => e.id === 'light.salon')?.area, undefined);
+  restored.dispose();
+
+  let refreshes = 0;
+  f.home.onAliasesChanged = () => refreshes++;
+  const area = () => f.home.view().entities.find((e) => e.id === 'light.bureau_3_ok')?.area;
+  f.fake.areas[0]!.name = 'Bureau principal';
+  f.fake.emitEvent('area_registry_updated', { action: 'update', area_id: 'bureau' });
+  await until(() => area() === 'Bureau principal');
+  f.fake.devices[0]!.area_id = 'salon';
+  f.fake.emitEvent('device_registry_updated', { action: 'update', device_id: 'dev_a' });
+  await until(() => area() === 'Salon');
+  f.fake.entityLinks.set('light.bureau_3_ok', { device_id: 'dev_a', area_id: 'bureau' });
+  f.fake.emitRegistry('light.bureau_3_ok');
+  await until(() => area() === 'Bureau principal');
+  assert.equal(refreshes, 3);
+});
+
+test('une commande sur toute la zone allume chaque appareil, et rapporte l’indisponible', async (t) => {
+  const f = await deskFixture(t);
+  f.fake.states.get('light.yeelight_2')!.state = 'unavailable';
+  const result = await f.home.run(
+    { entityIds: f.desk, action: 'turn_on', brightnessPct: null },
+    signal(),
+  );
+  assert.equal(validators.toolResult(result), true, JSON.stringify(validators.toolResult.errors));
+  assert.equal(result.status, 'succeeded');
+  assert.deepEqual(f.fake.calls.map((call) => call.body.entity_id).sort(), [
+    'light.bureau_3_ok',
+    'light.lampe_bureau',
+    'light.yeelight_color_3',
+  ]);
+  const results = result.result?.results as {
+    id: string;
+    status: string;
+    confirmed: boolean;
+    error?: string;
+  }[];
+  assert.equal(results.length, 4);
+  assert.deepEqual(
+    results.map((r) => [r.id, r.status, r.confirmed, r.error]),
+    [
+      ['light.yeelight_color_3', 'succeeded', true, undefined],
+      ['light.bureau_3_ok', 'succeeded', true, undefined],
+      ['light.yeelight_2', 'failed', false, 'unavailable'],
+      ['light.lampe_bureau', 'succeeded', true, undefined],
+    ],
+  );
+  assert.equal(result.result?.confirmed, false);
+  assert.match(result.summary, /3 appareil\(s\) sur 4.*Yeelight 2/);
+  const call = f.logs.snapshot().entries.find((entry) => entry.event === 'Appel Home Assistant');
+  assert.deepEqual(call?.details.entityIds, f.desk);
+});
+
+test('un identifiant non autorisé dans la liste refuse tout l’appel sans effet', async (t) => {
+  const f = await deskFixture(t);
+  const refused = await f.home.run(
+    { entityIds: ['light.bureau_3_ok', 'light.cachee'], action: 'turn_on', brightnessPct: null },
+    signal(),
+  );
+  assert.equal(refused.status, 'failed');
+  assert.equal(refused.error?.code, 'forbidden');
+  assert.equal(f.fake.calls.length, 0);
+});
+
+test('la luminosité est traitée appareil par appareil', async (t) => {
+  const f = await deskFixture(t);
+  const result = await f.home.run(
+    {
+      entityIds: ['light.yeelight_color_3', 'light.bureau_3_ok'],
+      action: 'turn_on',
+      brightnessPct: 40,
+    },
+    signal(),
+  );
+  assert.equal(result.status, 'succeeded');
+  const results = result.result?.results as { id: string; status: string; error?: string }[];
+  assert.deepEqual(
+    results.map((r) => [r.id, r.status, r.error]),
+    [
+      ['light.yeelight_color_3', 'succeeded', undefined],
+      ['light.bureau_3_ok', 'failed', 'invalid_params'],
+    ],
+  );
+  assert.deepEqual(f.fake.calls, [
+    {
+      path: '/api/services/light/turn_on',
+      body: { entity_id: 'light.yeelight_color_3', brightness_pct: 40 },
+    },
+  ]);
 });

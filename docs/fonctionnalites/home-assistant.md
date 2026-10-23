@@ -42,6 +42,8 @@ La sélection est limitée à 100 appareils, capteurs compris.
 
 Les autres noms (alias) définis dans Home Assistant sont lus automatiquement et suivis quand ils changent. Ils apparaissent sous chaque appareil (« Autres noms ») et aident Cornelius à comprendre « la lampe du salon ». Un alias ne donne jamais accès à un appareil non coché.
 
+Cornelius connaît aussi les pièces (zones) définies dans Home Assistant. La zone d’un appareil s’affiche sous son nom (« Zone : Bureau ») et se met à jour toute seule. Si l’appareil n’a pas de zone propre, il prend celle de son équipement, comme dans Home Assistant.
+
 Les boutons **Allumer** et **Éteindre** de la liste servent à tester. Ils fonctionnent pour toutes les lumières et prises, même non cochées, et ne changent pas les autorisations de Cornelius.
 
 ## Autoriser Cornelius
@@ -72,8 +74,11 @@ Une fois les appareils autorisés, on peut demander par exemple :
 
 - « Allume la lampe du salon à 40 % » ;
 - « Éteins la prise du bureau » ;
+- « Allume le bureau » : Cornelius allume tous les appareils autorisés de la zone Bureau ;
 - « Quelle température dans la chambre ? » ;
 - « Dans combien de temps se termine le lave-linge ? ».
+
+Quand vous nommez une pièce, seuls les appareils cochés de cette zone sont touchés. Les autres restent intacts. Si l’un d’eux est indisponible ou refuse l’ordre, Cornelius le dit et les autres sont quand même commandés.
 
 Pour une commande, Cornelius relit l’état de l’appareil, vérifie qu’il est autorisé, envoie l’ordre puis guette le nouvel état pendant 3 secondes au plus (beaucoup d’appareils Zigbee, Z-Wave ou Wi-Fi le remontent avec un léger retard). Il ne dit que l’appareil a changé d’état que si Home Assistant le confirme. Sinon, il dit que la commande est acceptée mais pas encore confirmée. Cette confirmation est celle que donne Home Assistant, pas une vérification physique. Une commande interrompue n’est jamais renvoyée automatiquement.
 

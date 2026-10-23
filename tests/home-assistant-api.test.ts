@@ -143,14 +143,14 @@ test('routes Home Assistant : authentification, origine, validation et secret c√
     method: 'POST',
     url: root + '/control',
     headers,
-    payload: { entityId: 'light.salon', action: 'turn_on', brightnessPct: 35 },
+    payload: { entityIds: ['light.salon'], action: 'turn_on', brightnessPct: 35 },
   });
   assert.equal(control.json().result.confirmed, true, control.body);
   const manual = await app.inject({
     method: 'POST',
     url: root + '/control',
     headers,
-    payload: { entityId: 'switch.bureau', action: 'turn_on', brightnessPct: null },
+    payload: { entityIds: ['switch.bureau'], action: 'turn_on', brightnessPct: null },
   });
   assert.equal(manual.json().result.confirmed, true);
   assert.equal(fake.calls.length, 2);
@@ -158,14 +158,19 @@ test('routes Home Assistant : authentification, origine, validation et secret c√
     method: 'POST',
     url: root + '/control',
     headers,
-    payload: { entityId: 'switch.inconnu', action: 'turn_on', brightnessPct: null },
+    payload: { entityIds: ['switch.inconnu'], action: 'turn_on', brightnessPct: null },
   });
   assert.equal(unavailable.json().error.code, 'forbidden');
   const forged = await app.inject({
     method: 'POST',
     url: root + '/control',
     headers,
-    payload: { entityId: 'switch.bureau', action: 'turn_on', brightnessPct: null, actor: 'admin' },
+    payload: {
+      entityIds: ['switch.bureau'],
+      action: 'turn_on',
+      brightnessPct: null,
+      actor: 'admin',
+    },
   });
   assert.equal(forged.statusCode, 400);
   assert.equal(fake.calls.length, 2);

@@ -6,6 +6,12 @@ Le fonctionnement actuel est décrit dans la [documentation](docs/README.md). Ce
 
 ## Non publié
 
+### 2026-10-23 : zones Home Assistant
+
+**Ajouté**
+
+- Cornelius connaît les zones de Home Assistant. « Allume le bureau » commande tous les appareils autorisés de la zone Bureau en un seul appel, au lieu d’un seul. La zone s’affiche dans la liste des appareils de l’administration.
+
 ### 2026-10-23 : journal des actions
 
 **Ajouté**
