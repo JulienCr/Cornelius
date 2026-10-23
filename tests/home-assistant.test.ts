@@ -184,6 +184,32 @@ test('un appareil qui remonte son état en différé est quand même confirmé',
   assert.equal(result.result?.confirmed, true, result.summary);
   assert.match(result.summary, /confirmé par Home Assistant/);
   assert.ok(Date.now() - started >= 500);
+  const reads = f.logs
+    .snapshot()
+    .entries.filter((entry) => entry.details.path === '/api/states/light.salon');
+  assert.ok(reads.length <= 2, 'une lecture avant, une après la commande, pas une par sondage');
+});
+
+test('le journal ne copie que les champs valides, et masque le jeton', async (t) => {
+  const f = await fixture(t);
+  f.select();
+  const rejected = await f.home.run(
+    {
+      entityId: 'light.salon',
+      action: 'secret action',
+      brightnessPct: { message: 'private user text' },
+    },
+    signal(),
+  );
+  assert.equal(rejected.error?.code, 'invalid_params');
+  const entry = f.logs.snapshot().entries.find((item) => item.event === 'Appel Home Assistant');
+  assert.equal(entry?.details.reason, 'invalid_params');
+  assert.equal(entry?.details.entityId, 'light.salon');
+  assert.equal(entry?.details.action, undefined);
+  assert.equal(entry?.details.data, undefined);
+  assert.ok(!JSON.stringify(f.logs.snapshot().entries).includes('private user text'));
+  f.logs.write('info', 'local', 'Fuite', { message: 'oops ' + f.fake.token });
+  assert.ok(!JSON.stringify(f.logs.snapshot().entries).includes(f.fake.token));
 });
 
 test('un accusé HTTP ne devient jamais une confirmation fictive', async (t) => {

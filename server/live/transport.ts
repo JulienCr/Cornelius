@@ -946,26 +946,33 @@ export class LiveTransport implements SessionTransport {
     active.completed.delete(delegation);
     this.send(active, { type: 'response.create' });
   }
-  private logToolCall(active: ActiveSession, callId: string, output: unknown) {
+  /** Metadata only: summaries and error messages can hold private text. Logs each call once. */
+  private logToolCall(active: ActiveSession, callId: string, output: unknown, delivered: boolean) {
     const call = active.toolCalls.get(callId);
     if (!call) return;
     active.toolCalls.delete(callId);
     const result = object(output);
-    const status = typeof result.status === 'string' ? result.status : 'ok';
-    const error = object(result.error);
-    const text = typeof error.message === 'string' ? error.message : result.summary;
+    const status =
+      typeof result.status === 'string'
+        ? result.status
+        : result.accepted === false
+          ? 'failed'
+          : 'ok';
+    const code = object(result.error).code;
     const failed = ['failed', 'cancelled', 'unknown'].includes(status);
     this.logs?.write(failed ? 'warn' : 'info', 'outil', 'Outil exécuté', {
       name: call.name,
       status,
       durationMs: this.now() - call.startedAt,
       interactionId: active.scope.interactionId,
-      ...(typeof text === 'string' && text ? { message: text.slice(0, 300) } : {}),
+      ...(typeof code === 'string' && code ? { errorCode: code.slice(0, 64) } : {}),
+      ...(delivered ? {} : { delivered: false }),
     });
   }
   private sendItem(active: ActiveSession, callId: string, output: unknown) {
-    this.logToolCall(active, callId, output);
-    if (active.finalized || active.closing || active.blocked || !active.attached) return;
+    const delivered = !(active.finalized || active.closing || active.blocked || !active.attached);
+    this.logToolCall(active, callId, output, delivered);
+    if (!delivered) return;
     this.send(active, {
       type: 'response.item.create',
       item: {
@@ -1105,6 +1112,12 @@ export class LiveTransport implements SessionTransport {
       const toolCount = (active.toolCounts.get(countKey) ?? 0) + 1;
       active.toolCounts.set(countKey, toolCount);
       if (toolCount > 32) {
+        this.logToolCall(
+          active,
+          item.call_id,
+          { status: 'failed', error: { code: 'tool_limit' } },
+          false,
+        );
         this.controller.close('Limite d’outils Live atteinte.');
         return;
       }
@@ -1353,6 +1366,8 @@ export class LiveTransport implements SessionTransport {
       if (!active.closing && !active.finalized && this.active === active)
         this.sendItem(active, callId, failureToolResult('Hermes est indisponible.'));
     } finally {
+      // No-op when sendItem already logged it; covers results discarded for a stale session.
+      this.logToolCall(active, callId, tool, false);
       this.finishTool(active, delegation);
     }
   }

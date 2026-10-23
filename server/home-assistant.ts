@@ -267,6 +267,7 @@ export class HomeAssistant {
     private readonly confirmWindowMs = 3000,
   ) {
     this.config = repository.get();
+    logs?.addSecret(this.config.token);
     for (const entity of this.config.catalog) this.entities.set(entity.id, entity);
   }
   start() {
@@ -484,6 +485,7 @@ export class HomeAssistant {
     const token = input.token?.trim() || this.config.token;
     if (!token)
       throw new HomeAssistantError('invalid_params', 'Renseignez un jeton Home Assistant.');
+    this.logs?.addSecret(token);
     const next = { ...this.config, url: origin, token };
     this.configuring = true;
     try {
@@ -714,11 +716,17 @@ export class HomeAssistant {
   handles(name: string) {
     return name === 'home_assistant__control' || name === 'home_assistant__read';
   }
-  private async readState(config: HomeAssistantConfig, id: string, signal: AbortSignal) {
+  private async readState(
+    config: HomeAssistantConfig,
+    id: string,
+    signal: AbortSignal,
+    quiet = false,
+  ) {
     const response = await this.rest(config, 'GET', '/api/states/' + encodeURIComponent(id), {
       signal,
       timeoutMs: 3000,
       maxBytes: 64 * 1024,
+      quiet,
     });
     if (response.status !== 200)
       throw new HomeAssistantError(
@@ -742,9 +750,17 @@ export class HomeAssistant {
     config: HomeAssistantConfig,
     method: 'GET' | 'POST',
     path: string,
-    options: { body?: string; signal: AbortSignal; timeoutMs: number; maxBytes: number },
+    options: {
+      body?: string;
+      signal: AbortSignal;
+      timeoutMs: number;
+      maxBytes: number;
+      /** Skips the success line (polling); failures are still logged. */
+      quiet?: boolean;
+    },
   ) {
     const startedAt = Date.now();
+    const { quiet, ...request } = options;
     try {
       const response = await this.http.fetch({
         url: config.url + path,
@@ -753,14 +769,20 @@ export class HomeAssistant {
           Authorization: 'Bearer ' + config.token,
           ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
         },
-        ...options,
+        ...request,
       });
-      this.logs?.write(response.status < 400 ? 'info' : 'warn', 'home-assistant', 'Requête REST', {
-        method,
-        path,
-        status: response.status,
-        durationMs: Date.now() - startedAt,
-      });
+      if (!quiet || response.status >= 400)
+        this.logs?.write(
+          response.status < 400 ? 'info' : 'warn',
+          'home-assistant',
+          'Requête REST',
+          {
+            method,
+            path,
+            status: response.status,
+            durationMs: Date.now() - startedAt,
+          },
+        );
       return response;
     } catch (error) {
       this.logs?.write('warn', 'home-assistant', 'Requête REST échouée', {
@@ -782,11 +804,29 @@ export class HomeAssistant {
     const input = record(args);
     const outcome = await work();
     const failed = ['failed', 'cancelled', 'unknown'].includes(outcome.status);
+    // Only fields that pass validation reach the journal: rejected input may hold private text.
+    const action = ['read', 'turn_on', 'turn_off'].includes(input.action as string)
+      ? input.action
+      : input.action === undefined
+        ? 'read'
+        : undefined;
+    const entityId =
+      typeof input.entityId === 'string' &&
+      input.entityId.length <= 255 &&
+      catalogRegex.test(input.entityId)
+        ? input.entityId
+        : undefined;
+    const brightness = input.brightnessPct;
+    const validBrightness =
+      typeof brightness === 'number' &&
+      Number.isInteger(brightness) &&
+      brightness >= 1 &&
+      brightness <= 100;
     this.logs?.write(failed ? 'warn' : 'info', 'home-assistant', 'Appel Home Assistant', {
       actor,
-      action: input.action ?? 'read',
-      entityId: input.entityId,
-      data: input.brightnessPct == null ? undefined : { brightness_pct: input.brightnessPct },
+      action,
+      entityId,
+      data: validBrightness ? { brightness_pct: brightness } : undefined,
       status: outcome.status,
       reason: outcome.error?.code,
       message: failed ? outcome.summary : undefined,
@@ -976,6 +1016,7 @@ export class HomeAssistant {
       // avant de conclure qu’il n’est pas confirmé.
       const deadline = Date.now() + this.confirmWindowMs;
       let observed = await this.readState(config, entity.id, combined);
+      let polls = 0;
       while (!reached(observed) && Date.now() < deadline && permitted()) {
         await new Promise<void>((resolve) => {
           const timer = setTimeout(resolve, 250);
@@ -994,7 +1035,8 @@ export class HomeAssistant {
           break;
         }
         if (!permitted()) break;
-        observed = await this.readState(config, entity.id, combined);
+        polls += 1;
+        observed = await this.readState(config, entity.id, combined, true);
       }
       if (!permitted())
         return tool('unknown', 'Commande envoyée avant l’annulation ; état non confirmé.', {
@@ -1008,6 +1050,7 @@ export class HomeAssistant {
         action: args.action,
         actor,
         confirmed,
+        polls,
       });
       return tool(
         'succeeded',

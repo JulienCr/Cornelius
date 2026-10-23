@@ -1788,6 +1788,114 @@ test('un outil réussi est journalisé en info, sans ses arguments', async (t) =
   assert.ok(!JSON.stringify(logged).includes('secret-salon'));
 });
 
+function toolResult(
+  status: 'succeeded' | 'failed',
+  summary: string,
+  error: { code: string; message: string } | null = null,
+): import('../shared/addons.js').ToolResult {
+  return {
+    schemaVersion: 1,
+    status,
+    result: null,
+    snapshotId: null,
+    actionRunId: null,
+    summary,
+    error: error && { ...error, retryable: false },
+  };
+}
+function callTool(f: ReturnType<typeof fixture>, callId: string, name: string, args = '{}') {
+  f.emit({
+    type: 'response.event',
+    delegation_id: 'journal',
+    event: {
+      type: 'response.output_item.done',
+      response_id: 'r-' + callId,
+      item: { type: 'function_call', call_id: callId, name, arguments: args },
+    },
+  });
+}
+
+test('journal des outils : ni résumé ni message d’erreur, seulement le code', async (t) => {
+  let next = toolResult('succeeded', 'Description privée de la scène');
+  const homeAssistant = {
+    tools: () => [],
+    handles: (name: string) => name === 'home_assistant__control',
+    run: async () => next,
+  };
+  const f = fixture(t, { mode: 1, integrations: { homeAssistant } });
+  await f.ready();
+  callTool(f, 'c1', 'home_assistant__control');
+  await setImmediate();
+  next = toolResult('failed', 'Prompt mémorisé', { code: 'boom', message: 'Prompt mémorisé' });
+  callTool(f, 'c2', 'home_assistant__control');
+  await setImmediate();
+  const logged = f.logs.snapshot().entries.filter((entry) => entry.source === 'outil');
+  assert.equal(logged.length, 2);
+  assert.equal(logged[1]!.details.errorCode, 'boom');
+  const journal = JSON.stringify(f.logs.snapshot().entries);
+  assert.ok(!journal.includes('Description privée'));
+  assert.ok(!journal.includes('Prompt mémorisé'));
+});
+
+test('journal des outils : une carte refusée sans statut est un échec', async (t) => {
+  const f = fixture(t, { mode: 1 });
+  await f.ready();
+  callTool(f, 'c1', 'ui__unknown_tool');
+  await setImmediate();
+  const logged = f.logs.snapshot().entries.filter((entry) => entry.source === 'outil');
+  assert.equal(logged.length, 1);
+  assert.equal(logged[0]!.level, 'warn');
+  assert.equal(logged[0]!.details.status, 'failed');
+});
+
+test('journal des outils : un agent qui finit après la fermeture est journalisé une fois, non livré', async (t) => {
+  let resolve!: (value: import('../shared/addons.js').ToolResult) => void;
+  const f = fixture(t, {
+    mode: 1,
+    integrations: {
+      agents: {
+        tools: () => [],
+        handles: (name) => name.startsWith('agents__'),
+        run: () =>
+          new Promise((done) => {
+            resolve = done;
+          }),
+        received: () => {},
+      },
+    },
+  });
+  const alice = f.profiles.create('Alice Journal');
+  await f.ready();
+  f.recognize(alice.id);
+  callTool(f, 'agent-call', 'agents__start');
+  f.controller.close('Test.');
+  resolve(toolResult('succeeded', 'Sortie Hermes privée'));
+  await new Promise((done) => setTimeout(done, 0));
+  const logged = f.logs.snapshot().entries.filter((entry) => entry.source === 'outil');
+  assert.equal(logged.length, 1);
+  assert.equal(logged[0]!.details.name, 'agents__start');
+  assert.equal(logged[0]!.details.delivered, false);
+  assert.ok(!JSON.stringify(f.logs.snapshot().entries).includes('Sortie Hermes privée'));
+});
+
+test('journal des outils : l’appel au-delà de la limite est journalisé comme refusé', async (t) => {
+  const homeAssistant = {
+    tools: () => [],
+    handles: (name: string) => name === 'home_assistant__control',
+    run: async () => toolResult('succeeded', 'Fait.'),
+  };
+  const f = fixture(t, { mode: 1, integrations: { homeAssistant } });
+  await f.ready();
+  for (let i = 0; i < 33; i++) callTool(f, 'c' + i, 'home_assistant__control');
+  await setImmediate();
+  const logged = f.logs.snapshot().entries.filter((entry) => entry.source === 'outil');
+  assert.equal(logged.length, 33);
+  const refused = logged.filter((entry) => entry.details.errorCode === 'tool_limit');
+  assert.equal(refused.length, 1);
+  assert.equal(refused[0]!.level, 'warn');
+  assert.equal(refused[0]!.details.delivered, false);
+});
+
 test('profil par défaut : Home Assistant réservé ne le compte pas comme une personne reconnue', async (t) => {
   const recognizedCalls: boolean[] = [];
   const homeAssistant = {
