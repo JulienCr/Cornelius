@@ -134,7 +134,7 @@ Ce qui ouvre la conversation se règle dans l’administration, rubrique « Quan
 Le miroir est un écran partagé. Quelques règles le protègent :
 
 - la ligne d’état ne cite jamais de prénom, mais les pastilles des personnes détectées montrent le prénom des personnes reconnues ;
-- les cartes et les sources personnelles ne s’affichent que pour leur propriétaire reconnu ;
+- les cartes et les sources personnelles ne s’affichent que pour leur propriétaire reconnu, sauf celles du profil par défaut, affichées quand personne n’est reconnu ;
 - Cornelius ne retient des souvenirs que d’une conversation avec une seule personne, reconnue par la caméra (voir [La mémoire](../fonctionnalites/memoire.md)).
 
 Sans le mode vie privée, une conversation continue quand quelqu’un arrive : la première personne reconnue garde son profil, avec ses sources, sa mémoire et ses agents. Faites attention à ce que vous demandez devant des invités.
@@ -152,6 +152,8 @@ Les images de la caméra et les visages restent sur l’ordinateur. Le son du mi
 Par défaut, une conversation sans personne reconnue se déroule au nom du foyer : pas de mémoire, de sources ni d’agents personnels. Dans l’administration, « Conversations au nom de » permet de choisir un profil à la place, par exemple dans un foyer d’une seule personne ou sans caméra.
 
 - Une personne reconnue par la caméra remplace toujours le profil par défaut.
+- Cornelius salue le profil par défaut par son prénom, même si personne n’est reconnu. En mode voix, il ne le présente pas comme reconnu par la caméra.
+- L’option « Réserver aux personnes reconnues » de Home Assistant exige toujours un visage reconnu : le profil par défaut ne suffit pas.
 - Devant plusieurs personnes, le miroir revient au foyer.
 - Le mode « Identification » et l’option « Personnes reconnues » exigent toujours un visage reconnu : le profil par défaut n’ouvre rien.
 - Un satellite garde son propre réglage, et un satellite rattaché à personne reste au foyer.

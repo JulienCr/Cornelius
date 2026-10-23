@@ -1876,6 +1876,23 @@ test('profil par défaut en mode voix : la personne reconnue le remplace et la c
   assert.equal(f.state().activeProfile?.id, f.alice.id);
 });
 
+test('profil par défaut en mode voix : plusieurs personnes ramènent au foyer', (t) => {
+  const f = voiceFixture(t);
+  f.controller.setDefaultProfileId(f.bob.id);
+  assert.equal(f.controller.wakeDetected(), true);
+  f.ready();
+  assert.equal(f.state().selection, 'default');
+  f.see([null, null]);
+  assert.equal(f.state().selection, 'default');
+  f.see([null, null]);
+  assert.equal(f.state().selection, 'household');
+  assert.equal(f.state().activeProfile, null);
+  assert.equal(f.transport.closed.length, 1);
+  f.acknowledgeClose();
+  assert.equal(f.state().selection, 'household');
+  assert.equal(f.state().activeProfile, null);
+});
+
 test('profil par défaut : le mode identification et les personnes reconnues exigent toujours un visage reconnu', (t) => {
   const f = fixture(t);
   f.controller.setSessionMode(2);

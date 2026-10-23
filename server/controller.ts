@@ -687,13 +687,14 @@ export class SessionController {
       this.voiceIdentityUntil = Math.max(this.voiceIdentityUntil, now + voiceIdentityWindowMs);
     }
     // Vie privée : une conversation rattachée à une personne se ferme devant plusieurs personnes.
-    this.crowdedFrames =
-      this.privacyMode && running && this.profile !== null && people.length > 1
-        ? this.crowdedFrames + 1
-        : 0;
+    // Sans vie privée, une foule retire le profil par défaut : plusieurs personnes, c'est le foyer.
+    const crowdRelevant =
+      this.profile !== null && (this.privacyMode || this.selection === 'default');
+    this.crowdedFrames = running && crowdRelevant && people.length > 1 ? this.crowdedFrames + 1 : 0;
     if (this.crowdedFrames >= privacyConfirmFrames) {
       this.crowdedFrames = 0;
-      this.close('Mode vie privée : plusieurs personnes.');
+      if (this.privacyMode) this.close('Mode vie privée : plusieurs personnes.');
+      else this.changeProfile(null, 'household');
     } else if (
       this.voiceRecognition &&
       running &&
@@ -915,6 +916,12 @@ export class SessionController {
   /** Profil par défaut, ou null s'il n'est pas réglé ou n'existe plus. */
   private defaultProfile(): Profile | null {
     return this.defaultProfileId ? this.profiles.get(this.defaultProfileId) : null;
+  }
+
+  /** Une personne reconnue ou choisie à la main est active : le profil par défaut ne compte pas. */
+  recognizedPersonActive(): boolean {
+    if (this.satelliteSession()) return this.profile !== null;
+    return this.recognizedProfile() !== null;
   }
 
   /** Profil lié à une personne reconnue ou choisi à la main, donc pas le profil par défaut. */
