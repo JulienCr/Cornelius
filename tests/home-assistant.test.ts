@@ -6,6 +6,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { HomeAssistant, normalizeEntity } from '../server/home-assistant.js';
 import { HomeAssistantRepository } from '../server/home-assistant-store.js';
 import { HOME_ASSISTANT_CUT, HOME_ASSISTANT_UNREACHABLE } from '../server/home-assistant-socket.js';
+import { DiagnosticLog } from '../server/logs.js';
 import { openDatabase } from '../server/storage.js';
 import { createHttpClient } from '../server/addons/http.js';
 import { validators } from '../shared/validation.js';
@@ -15,7 +16,8 @@ async function fixture(t: TestContext) {
   const fake = await fakeHomeAssistant();
   const db = openDatabase(':memory:');
   const repository = new HomeAssistantRepository(db);
-  const home = new HomeAssistant(repository, createHttpClient());
+  const logs = new DiagnosticLog();
+  const home = new HomeAssistant(repository, createHttpClient(), logs);
   t.after(async () => {
     home.dispose();
     db.close();
@@ -27,7 +29,7 @@ async function fixture(t: TestContext) {
     home.select({ selected, revision: home.view().revision });
     return home.setAccess({ enabled, revision: home.view().revision });
   };
-  return { fake, db, repository, home, select };
+  return { fake, db, repository, home, select, logs };
 }
 const command = (
   entityId = 'light.salon',
@@ -157,6 +159,20 @@ test('commande précise, luminosité et retour confirmé par un état réel', as
   const read = await f.home.run(command('light.salon', 'read'), signal());
   assert.equal(read.result?.confirmed, true);
   assert.equal(f.fake.calls.length, 1);
+
+  const entries = f.logs.snapshot().entries.filter((entry) => entry.source === 'home-assistant');
+  const rest = entries.find((entry) => entry.details.path === '/api/services/light/turn_on');
+  assert.equal(rest?.details.method, 'POST');
+  assert.equal(rest?.details.status, 200);
+  assert.equal(typeof rest?.details.durationMs, 'number');
+  const call = entries.find((entry) => entry.event === 'Appel Home Assistant');
+  assert.deepEqual(
+    [call?.details.action, call?.details.entityId, call?.details.data, call?.details.status],
+    ['turn_on', 'light.salon', { brightness_pct: 40 }, 'succeeded'],
+  );
+  const journal = JSON.stringify(f.logs.snapshot().entries);
+  assert.ok(!journal.includes(f.fake.token));
+  assert.ok(!journal.includes(f.fake.url));
 });
 
 test('un appareil qui remonte son état en différé est quand même confirmé', async (t) => {
@@ -168,6 +184,32 @@ test('un appareil qui remonte son état en différé est quand même confirmé',
   assert.equal(result.result?.confirmed, true, result.summary);
   assert.match(result.summary, /confirmé par Home Assistant/);
   assert.ok(Date.now() - started >= 500);
+  const reads = f.logs
+    .snapshot()
+    .entries.filter((entry) => entry.details.path === '/api/states/light.salon');
+  assert.ok(reads.length <= 2, 'une lecture avant, une après la commande, pas une par sondage');
+});
+
+test('le journal ne copie que les champs valides, et masque le jeton', async (t) => {
+  const f = await fixture(t);
+  f.select();
+  const rejected = await f.home.run(
+    {
+      entityId: 'light.salon',
+      action: 'secret action',
+      brightnessPct: { message: 'private user text' },
+    },
+    signal(),
+  );
+  assert.equal(rejected.error?.code, 'invalid_params');
+  const entry = f.logs.snapshot().entries.find((item) => item.event === 'Appel Home Assistant');
+  assert.equal(entry?.details.reason, 'invalid_params');
+  assert.equal(entry?.details.entityId, 'light.salon');
+  assert.equal(entry?.details.action, undefined);
+  assert.equal(entry?.details.data, undefined);
+  assert.ok(!JSON.stringify(f.logs.snapshot().entries).includes('private user text'));
+  f.logs.write('info', 'local', 'Fuite', { message: 'oops ' + f.fake.token });
+  assert.ok(!JSON.stringify(f.logs.snapshot().entries).includes(f.fake.token));
 });
 
 test('un accusé HTTP ne devient jamais une confirmation fictive', async (t) => {
@@ -446,6 +488,10 @@ test('réservé aux personnes reconnues : outils masqués, appels refusés et r�
   const command_ = await f.home.run(command(), signal(), 'home_assistant__control', false);
   assert.equal(command_.status, 'failed');
   assert.equal(command_.error?.code, 'forbidden');
+  const refusal = f.logs.snapshot().entries.find((entry) => entry.event === 'Appel Home Assistant');
+  assert.equal(refusal?.level, 'warn');
+  assert.equal(refusal?.details.reason, 'forbidden');
+  assert.match(String(refusal?.details.message), /personnes reconnues/);
   const lock = await f.home.run(
     { entityId: 'lock.porte' },
     signal(),

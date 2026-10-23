@@ -48,6 +48,7 @@ test('niveaux et origines du journal en français', () => {
   assert.equal(sourceLabel('http'), 'Requêtes au serveur');
   assert.equal(sourceLabel('perception'), 'Périphériques');
   assert.equal(sourceLabel('local'), 'Serveur');
+  assert.equal(sourceLabel('outil'), 'Outils');
   assert.equal(sourceLabel('inconnue'), 'Inconnue');
   assert.deepEqual(logSources(all), ['session', 'navigateur', 'http']);
 });

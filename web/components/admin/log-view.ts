@@ -16,6 +16,7 @@ const sourceLabels: Record<string, string> = {
   perception: 'Périphériques',
   addon: 'Modules',
   action: 'Commandes',
+  outil: 'Outils',
   'home-assistant': 'Home Assistant',
   image: 'Images',
   memory: 'Mémoire',

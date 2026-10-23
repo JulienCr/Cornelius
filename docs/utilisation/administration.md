@@ -194,7 +194,7 @@ Voir [Dépannage](depannage.md).
 
 *Diagnostic.* Tout ce que fait Cornelius, dans l’ordre, à joindre à une demande d’aide.
 
-La carte « Journal détaillé » montre les 1 000 derniers événements depuis le démarrage, mis à jour toutes les 2 secondes. On peut filtrer par origine, cocher « Problèmes seulement », chercher un mot, mettre en « Pause » et « Exporter le journal filtré ». Le détail est dans [Dépannage](depannage.md#lire-et-exporter-le-journal).
+La carte « Journal détaillé » montre les 1 000 derniers événements depuis le démarrage, mis à jour toutes les 2 secondes. On peut filtrer par origine, cocher « Problèmes seulement », chercher un mot, mettre en « Pause » et « Exporter le journal filtré ». Chaque action de Cornelius (Home Assistant, commandes HTTP, agents, modules) y figure avec son résultat et sa durée. Le détail est dans [Dépannage](depannage.md#lire-et-exporter-le-journal).
 
 ## Dans une fenêtre étroite
 
