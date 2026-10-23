@@ -160,7 +160,7 @@ Par défaut, une conversation sans personne reconnue se déroule au nom du foyer
 - Un satellite garde son propre réglage, et un satellite rattaché à personne reste au foyer.
 - Supprimer le profil par défaut ramène au foyer.
 
-Attention : une personne seule devant le miroir, un invité par exemple, accède à la mémoire du profil par défaut. Ce qu’elle dit peut aussi y être enregistré.
+Attention : une personne seule devant le miroir, un invité par exemple, accède à la mémoire du profil par défaut. Ce qu’elle dit peut aussi y être enregistré. Elle peut aussi interroger Hermes au nom de ce profil, et sans caméra n’importe qui le peut. Les résultats peuvent s’afficher sur le miroir. Cela vaut aussi pour un profil choisi dans l’administration.
 
 ## Miroir ouvert dans un autre onglet
 
