@@ -14,6 +14,20 @@ function digest(password: string, salt: Buffer): Buffer {
   return scryptSync(password, salt, 32, { N: 16384, r: 8, p: 1 });
 }
 
+/** Salted scrypt hash in the `scrypt$salt$hash` format. */
+export function hashPassword(password: string): string {
+  const salt = randomBytes(16);
+  return `scrypt$${salt.toString('base64')}$${digest(password, salt).toString('base64')}`;
+}
+
+export function verifyPasswordHash(input: string, stored: string): boolean {
+  const [scheme, salt, hash] = stored.split('$');
+  if (scheme !== 'scrypt' || !salt || !hash) return false;
+  const expected = Buffer.from(hash, 'base64');
+  const actual = digest(input, Buffer.from(salt, 'base64'));
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
 function equalText(input: string, expected: string): boolean {
   return timingSafeEqual(
     createHash('sha256').update(input).digest(),
@@ -43,18 +57,28 @@ export class AdminPassword {
   verify(input: string): boolean {
     const stored = this.stored();
     if (!stored) return equalText(input, this.envPassword);
-    const [scheme, salt, hash] = stored.split('$');
-    if (scheme !== 'scrypt' || !salt || !hash) return false;
-    const expected = Buffer.from(hash, 'base64');
-    const actual = digest(input, Buffer.from(salt, 'base64'));
-    return actual.length === expected.length && timingSafeEqual(actual, expected);
+    return verifyPasswordHash(input, stored);
+  }
+  /**
+   * True when the .env password changed since the last start (sessions must be closed).
+   * Records the current one; a first start only records it.
+   */
+  envRotated(): boolean {
+    if (this.source() !== 'env') return false;
+    const row = this.db.prepare('SELECT hash FROM admin_env_stamp WHERE id = 1').get();
+    if (row && verifyPasswordHash(this.envPassword, String(row.hash))) return false;
+    this.db
+      .prepare(
+        'INSERT INTO admin_env_stamp (id, hash) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET hash = excluded.hash',
+      )
+      .run(hashPassword(this.envPassword));
+    return row !== undefined;
   }
   isDefault(): boolean {
     return !this.stored() && this.envPassword === this.defaultPassword;
   }
   set(password: string): void {
-    const salt = randomBytes(16);
-    const value = `scrypt$${salt.toString('base64')}$${digest(password, salt).toString('base64')}`;
+    const value = hashPassword(password);
     this.db
       .prepare(
         'INSERT INTO admin_password (id, hash, updated_at) VALUES (1, ?, ?) ON CONFLICT(id) DO UPDATE SET hash = excluded.hash, updated_at = excluded.updated_at',

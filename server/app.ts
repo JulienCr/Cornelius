@@ -178,6 +178,7 @@ export async function createApp(
   const trustedDevices = new TrustedDevices(db, now);
   const adminSessions = new AdminSessions(db, now);
   const adminPassword = new AdminPassword(db, config.adminPassword, DEFAULT_ADMIN_PASSWORD, now);
+  if (adminPassword.envRotated()) adminSessions.closeAllExcept(null);
   const defaultPassword = () => adminPassword.isDefault();
   if (defaultPassword())
     logs.write('warn', 'local', 'Mot de passe administrateur par défaut', {

@@ -184,4 +184,32 @@ test('la session administrateur survit à un redémarrage du serveur, sans stock
       .statusCode,
     401,
   );
+  // t.after hooks run in registration order: the directory removal above runs before the
+  // fixtures' own close, so every app must be closed here first.
+  await fourth.app.close();
+});
+
+test('un mot de passe .env modifié ferme les sessions au redémarrage, le même les garde', async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'cornelius-session-rotation-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const databasePath = join(dir, 'cornelius.sqlite');
+  const first = await fixture(t, { databasePath });
+  const cookie = await login(first);
+  await first.app.close();
+
+  const same = await fixture(t, { databasePath });
+  const profiles = (f: typeof same) =>
+    f.app.inject({ url: '/api/admin/profiles', headers: { cookie } });
+  assert.equal((await profiles(same)).statusCode, 200);
+  await same.app.close();
+
+  const rotated = await fixture(t, { databasePath, adminPassword: 'autre-mot-de-passe-5678' });
+  assert.equal((await profiles(rotated)).statusCode, 401);
+  await rotated.app.close();
+
+  const raw = new DatabaseSync(databasePath);
+  const stamp = raw.prepare('SELECT hash FROM admin_env_stamp').all();
+  raw.close();
+  assert.equal(stamp.length, 1);
+  assert.equal(JSON.stringify(stamp).includes('autre-mot-de-passe'), false);
 });

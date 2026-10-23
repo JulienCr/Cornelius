@@ -1,17 +1,19 @@
 import { createHash } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 
-/** Admin sessions survive restarts (replayable migration). Only the token hash is stored. */
+/** Sessions survive restarts (token hash only); the stamp is a salted hash of the .env password. */
 export const adminSessionsMigration = `CREATE TABLE IF NOT EXISTS admin_sessions (
   token_hash TEXT PRIMARY KEY,
   expires_at INTEGER NOT NULL,
   last_used_at INTEGER NOT NULL
+) STRICT;
+CREATE TABLE IF NOT EXISTS admin_env_stamp (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  hash TEXT NOT NULL
 ) STRICT;`;
 
 export const adminSessionSeconds = 3600;
 export const maxAdminSessions = 64;
-// Below this, a request skips the write: the sliding expiry and LRU order stay this precise.
-const touchGranularityMs = 30_000;
 
 export function sessionHash(token: string): string {
   return createHash('sha256').update(token).digest('base64url');
@@ -54,14 +56,12 @@ export class AdminSessions {
     return evicted;
   }
 
-  /** Extends the session to one hour from now (skipped within `touchGranularityMs`). */
+  /** Extends the session to one hour from now. */
   touch(token: string): void {
     const time = this.now();
     this.db
-      .prepare(
-        'UPDATE admin_sessions SET expires_at = ?, last_used_at = ? WHERE token_hash = ? AND last_used_at <= ?',
-      )
-      .run(time + adminSessionSeconds * 1000, time, sessionHash(token), time - touchGranularityMs);
+      .prepare('UPDATE admin_sessions SET expires_at = ?, last_used_at = ? WHERE token_hash = ?')
+      .run(time + adminSessionSeconds * 1000, time, sessionHash(token));
   }
 
   close(token: string): void {
