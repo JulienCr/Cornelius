@@ -1224,7 +1224,7 @@ export class LiveTransport implements SessionTransport {
   }
   private agentAudience(profileId: string) {
     const state = this.controller.snapshot().state;
-    if (state.selection === 'default')
+    if (state.selection === 'default' || state.selection === 'explicit')
       return (
         state.activeProfile?.id === profileId &&
         state.session.phase === 'ready' &&

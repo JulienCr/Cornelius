@@ -1804,48 +1804,76 @@ test('mode voix : le profil par défaut n’est pas annoncé comme reconnu par l
   assert.doesNotMatch(identity.content, /défaut|reconnue/);
 });
 
-test('Hermes Live : le profil par défaut accède à ses agents sans caméra', async (t) => {
-  let input: Parameters<import('../server/agents.js').Agents['run']>[0] | undefined;
-  const f = fixture(t, {
-    mode: 4,
-    defaultProfileName: 'Zoe',
-    integrations: {
-      agents: {
-        tools: () => [],
-        handles: (name) => name.startsWith('agents__'),
-        run: async (value) => {
-          input = value;
-          return {
-            schemaVersion: 1,
-            status: 'succeeded',
-            result: { taskId: 'zoe-task', output: 'ok' },
-            snapshotId: null,
-            actionRunId: null,
-            summary: 'ok',
-            error: null,
-          };
+for (const selection of ['default', 'explicit'] as const)
+  test(`Hermes Live : le profil ${selection} accède à ses agents sans caméra`, async (t) => {
+    let input: Parameters<import('../server/agents.js').Agents['run']>[0] | undefined;
+    const f = fixture(t, {
+      mode: 4,
+      defaultProfileName: 'Zoe',
+      integrations: {
+        agents: {
+          tools: () => [],
+          handles: (name) => name.startsWith('agents__'),
+          run: async (value) => {
+            input = value;
+            return {
+              schemaVersion: 1,
+              status: 'succeeded',
+              result: { taskId: 'zoe-task', output: 'ok' },
+              snapshotId: null,
+              actionRunId: null,
+              summary: 'ok',
+              error: null,
+            };
+          },
+          received: () => {},
         },
-        received: () => {},
       },
-    },
-  });
-  await f.ready();
-  const zoe = f.controller.snapshot().state.activeProfile!;
-  assert.equal(f.controller.snapshot().state.selection, 'default');
-  f.emit({
-    type: 'response.event',
-    delegation_id: 'zoe-delegation',
-    event: {
-      type: 'response.output_item.done',
-      item: {
-        type: 'function_call',
-        call_id: 'zoe-call',
-        name: 'agents__start',
-        arguments: JSON.stringify({ message: 'Demande Zoe' }),
+    });
+    await f.ready();
+    const zoe = f.controller.snapshot().state.activeProfile!;
+    if (selection === 'explicit')
+      f.controller.command({ type: 'select_profile', profileId: zoe.id });
+    assert.equal(f.controller.snapshot().state.selection, selection);
+    f.controller.observe({
+      schemaVersion: 1,
+      producerBootId: 'camera',
+      sequence: 9000,
+      observedAt: Date.now(),
+      health: 'unavailable',
+      presence: false,
+      engaged: false,
+      people: [],
+    });
+    const state = f.controller.snapshot().state;
+    assert.equal(state.presence.health, 'unavailable');
+    assert.equal(state.session.phase, 'ready');
+    f.emit({
+      type: 'response.event',
+      delegation_id: 'zoe-delegation',
+      event: {
+        type: 'response.output_item.done',
+        item: {
+          type: 'function_call',
+          call_id: 'zoe-call',
+          name: 'agents__start',
+          arguments: JSON.stringify({ message: 'Demande Zoe' }),
+        },
       },
-    },
+    });
+    await new Promise((done) => setTimeout(done, 0));
+    assert.equal(input?.profileId, zoe.id);
+    assert.ok(!JSON.stringify(f.sent).includes('seule et reconnue'));
+    const task: import('../shared/agents.js').AgentTaskView = {
+      id: 'zoe-task',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      status: 'completed',
+      persistent: true,
+      output: 'Résultat Zoe.',
+      approval: null,
+      error: null,
+    };
+    assert.equal(f.live.deliverAgentTask(zoe.id, task), true);
+    assert.equal(f.controller.snapshot().state.cards[0]?.content.description, 'Résultat Zoe.');
   });
-  await new Promise((done) => setTimeout(done, 0));
-  assert.equal(input?.profileId, zoe.id);
-  assert.ok(!JSON.stringify(f.sent).includes('seule et reconnue'));
-});
